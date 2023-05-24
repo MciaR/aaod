@@ -8,6 +8,7 @@ from torchvision import datasets, transforms
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 epsilons = [0, .05, .1, .15, .2, .25, .3]
 pretrained_model = "R:/adversarialAttack/paper/aaod/data/pt/mnist_cnn.pt"
 use_cuda = True
@@ -109,7 +110,7 @@ def test(model, device, test_loader, epsilon):
         # Set requires_grad attribute of tensor. Important for Attack
         data.requires_grad = True
 
-        # Fofward pass the data through the model
+        # Forward pass the data through the model
         output = model(data)
         init_pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
 
