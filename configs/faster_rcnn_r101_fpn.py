@@ -1,5 +1,8 @@
 _base_ = ['./base/coco_datasets.py', './base/default_runtime.py', './base/schedule_1x.py']
 
+# custom settings, need import module, so it will excute the registry
+custom_imports = dict(imports=['model.aa_backbone.aa_resnet'], allow_failed_imports=False)
+
 # model settings
 model = dict(
     type='FasterRCNN',
