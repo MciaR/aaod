@@ -1,4 +1,4 @@
-_base_ = ['../configs/coco_datasets.py', '../configs/default_runtime.py', '../configs/schedule_1x.py']
+_base_ = ['./base/coco_datasets.py', './base/default_runtime.py', './base/schedule_1x.py']
 
 # model settings
 model = dict(
@@ -10,8 +10,8 @@ model = dict(
         bgr_to_rgb=True,
         pad_size_divisor=32),
     backbone=dict(
-        type='ResNet',
-        depth=50,
+        type='AAResNet',
+        depth=101,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
