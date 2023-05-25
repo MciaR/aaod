@@ -1,1 +1,1 @@
-from .aa_resnet101 import AAResNet
+from .aa_resnet import AAResNet
