@@ -16,6 +16,19 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "Vis",
+            "type": "python",
+            "request": "launch",
+            "program": "R:/adversarialAttack/paper/aaod/tools/vis_featmap.py",
+            // "args": [
+            //     "model/faster_rcnn_r101_fpn.py",
+            //     "--work-dir",
+            //     ".work_dir"
+            // ],
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }
