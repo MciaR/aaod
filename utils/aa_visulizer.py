@@ -55,37 +55,34 @@ class AAVisualizer():
                 num=1, FigureClass=Figure, **self.fig_show_cfg)
             self.manager.set_window_title(win_name)
     
-    def _forward(self, model, imgs):
+    def _forward(self, model, img):
         """ Get model output.
         
         Args:
             model (nn.Module): such as `model.backbone`, `model.head`.
-            imgs (str): list of img path. 
+            imgs (str): img path. 
         Return:
             feats (List[Tensor]): List of model output. 
         """
         feats = []
         preprocess = self.get_preprocess()
 
-        for img in imgs:
-            # prepare data
-            if isinstance(img, np.ndarray):
-                # TODO: remove img_id.
-                data_ = dict(img=img, img_id=0)
-            else:
-                # TODO: remove img_id.
-                data_ = dict(img_path=img, img_id=0)
-            # build the data pipeline
-            data_ = preprocess(data_)
-            input_data = data_['inputs'].float().unsqueeze(0).to(self.device)
+        # prepare data
+        if isinstance(img, np.ndarray):
+            # TODO: remove img_id.
+            data_ = dict(img=img, img_id=0)
+        else:
+            # TODO: remove img_id.
+            data_ = dict(img_path=img, img_id=0)
+        # build the data pipeline
+        data_ = preprocess(data_)
+        input_data = data_['inputs'].float().unsqueeze(0).to(self.device)
 
-            # forward the model
-            with torch.no_grad():
-                feat = model(input_data)
+        # forward the model
+        with torch.no_grad():
+            feat = model(input_data)
 
-            feats.append(feat)
-
-        return feats
+        return feat
     
     @staticmethod
     def draw_featmap(featmap: torch.Tensor,
@@ -94,7 +91,8 @@ class AAVisualizer():
                      topk: int = 20,
                      arrangement: Tuple[int, int] = (4, 5),
                      resize_shape: Optional[tuple] = None,
-                     alpha: float = 0.5) -> np.ndarray:
+                     alpha: float = 0.5,
+                     with_text: bool = True) -> np.ndarray:
         """Draw featmap.
 
         - If `overlaid_image` is not None, the final output image will be the
@@ -139,6 +137,7 @@ class AAVisualizer():
                 Defaults to None.
             alpha (Union[int, List[int]]): The transparency of featmap.
                 Defaults to 0.5.
+            with_text (bool): Wethere add channel num to output feature map.
 
         Returns:
             np.ndarray: RGB image.
@@ -225,7 +224,8 @@ class AAVisualizer():
             for i in range(topk):
                 axes = fig.add_subplot(row, col, i + 1)
                 axes.axis('off')
-                axes.text(2, 15, f'channel: {indices[i]}', fontsize=10)
+                if with_text:
+                    axes.text(2, 15, f'channel: {indices[i]}', fontsize=10)
                 axes.imshow(
                     convert_overlay_heatmap(topk_featmap[i], overlaid_image,
                                             alpha))
