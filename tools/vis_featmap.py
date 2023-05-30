@@ -13,6 +13,7 @@ class ExpVisualizer():
     """Visualizer for get exp results."""
     def __init__(self, cfg_file, ckpt_file):
         self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_path=ckpt_file)
+        self.dataset = self.visualizer.get_dataset()
 
     def show_single_pic_feats(self, img, show_layer=0, top_k = 100, pic_overlay=False):
         """Show `top_k` channels of featuremap of a pic."""
@@ -75,7 +76,7 @@ class ExpVisualizer():
 
         # ====== Third row: upsample and overlay heatmap img ======
         for i in range(col):
-            plt.subplot(row, col, ind)
+            ax = plt.subplot(row, col, ind)
             plt.xticks([],[])
             plt.yticks([],[])
             if i == 0:
@@ -83,6 +84,11 @@ class ExpVisualizer():
             _feature = feat[i].squeeze()
             heatmap = self.visualizer.draw_featmap(_feature, _image, channel_reduction='squeeze_mean', alpha=0.5, resize_shape=_resize_shape)
             plt.title(f"({_image.shape[0]} x {_image.shape[1]})", fontsize=10)
+            fake_bboxes = np.array([[100, 90, 345, 140], [40, 60, 210, 440]])
+            # get bboxes rects 
+            rects = self.visualizer.draw_bboxes(fake_bboxes, edge_colors='#9400D3')
+            for rect in rects:
+                ax.add_patch(rect)
             plt.imshow(heatmap)
             ind += 1
         
@@ -102,7 +108,11 @@ if __name__ == '__main__':
     pic_overlay = False
 
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
-    vis.show_cmp_results(img=img)
+    # vis.show_cmp_results(img=img)
+    dataset = vis.dataset
+    for data in dataset:
+        print(data)
+        print(data)
 
 
 

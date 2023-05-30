@@ -1,14 +1,16 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union, List
 import torch
 import torch.nn.functional as F
 import warnings
 import numpy as np
 import cv2
-from matplotlib import image
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
-from mmdet.apis import init_detector
+from mmdet.apis import init_detector, inference_detector
 from mmcv.transforms import Compose
 from mmdet.utils import get_test_pipeline_cfg
+from mmdet.registry import DATASETS
 from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           color_str2rgb, color_val_matplotlib,
                                           convert_overlay_heatmap,
@@ -22,6 +24,8 @@ class AAVisualizer():
     def __init__(self, cfg_file, ckpt_path, device='cuda:0', fig_show_cfg=dict(frameon=False)) -> None:
         self.device = device
         self.model = self.get_model(cfg_file, ckpt_path)
+        # TODO: initialize dataset
+        # self.dataset = self.get_dataset()
         self.fig_show_cfg = fig_show_cfg
 
     def get_model(self, cfg_file, ckpt_path):
@@ -29,12 +33,30 @@ class AAVisualizer():
         return model
     
     def get_preprocess(self):
-        """ get data preprocess pipeline"""
+        """Get data preprocess pipeline"""
         cfg = self.model.cfg
         test_pipeline = get_test_pipeline_cfg(cfg)
         test_pipeline = Compose(test_pipeline)
 
         return test_pipeline
+    
+    def get_dataset(self):
+        """Get dataset from config."""
+        dataset_cfg = self.model.cfg._cfg_dict.test_dataloader.dataset
+        dataset = DATASETS.build(dataset_cfg)
+
+        return dataset
+    
+    def get_pred(self, img: str):
+        """Get inference results of model.
+        
+        Args:
+            img (str): img path.
+        Return:
+            result (torch.Tensor | np.ndarray): result of inference.
+        """
+        result = inference_detector(self.model, img)
+        return result
     
     def _init_manager(self, win_name: str) -> None:
         """Initialize the matplot manager.
@@ -64,7 +86,6 @@ class AAVisualizer():
         Return:
             feats (List[Tensor]): List of model output. 
         """
-        feats = []
         preprocess = self.get_preprocess()
 
         # prepare data
@@ -142,7 +163,6 @@ class AAVisualizer():
         Returns:
             np.ndarray: RGB image.
         """
-        import matplotlib.pyplot as plt
         assert isinstance(featmap,
                           torch.Tensor), (f'`featmap` should be torch.Tensor,'
                                           f' but got {type(featmap)}')
@@ -255,7 +275,6 @@ class AAVisualizer():
         """
         # img = image.imread(img)
         if backend == 'matplotlib':
-            import matplotlib.pyplot as plt
             is_inline = 'inline' in plt.get_backend()
             self._init_manager(win_name)
             fig = self.manager.canvas.figure
@@ -283,3 +302,34 @@ class AAVisualizer():
         else:
             raise ValueError('backend should be "matplotlib" or "cv2", '
                              f'but got {backend} instead')
+    
+    def draw_bboxes(self, 
+                    bboxes: Union[np.ndarray, torch.Tensor],
+                    edge_colors: str,
+                    ):
+        """Draw single or multiple bboxes.
+        
+        Args:
+            bboxes (Union[np.ndarray| torch.Tensor]): bboxes list, (x1, y1, w, h).
+            edge_colors (str): such as `#9400D3`
+
+        Return:
+            rect (Object): patches object.
+        """
+
+        check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
+        bboxes = tensor2ndarray(bboxes)
+
+        if len(bboxes.shape) == 1:
+            bboxes = bboxes[None]
+        assert bboxes.shape[-1] == 4, (
+            f'The shape of `bboxes` should be (N, 4), but got {bboxes.shape}')
+
+        assert (bboxes[:, 0] <= bboxes[:, 2]).all() and (bboxes[:, 1] <=
+                                                         bboxes[:, 3]).all()
+        rects = []
+        for bbox in bboxes:
+            rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2], bbox[3], linewidth=1, edgecolor=edge_colors, facecolor='none')
+            rects.append(rect)
+
+        return rects
