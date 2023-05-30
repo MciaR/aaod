@@ -1,8 +1,8 @@
-from utils import AAVisualizer
-from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
-from mmengine.visualization.utils import img_from_canvas
+
+from utils import AAVisualizer
+from PIL import Image
 
 
 def parse_args():
@@ -12,7 +12,7 @@ def parse_args():
 class ExpVisualizer():
     """Visualizer for get exp results."""
     def __init__(self, cfg_file, ckpt_file):
-        self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_path=ckpt_file)
+        self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
         self.dataset = self.visualizer.get_dataset()
 
     def show_single_pic_feats(self, img, show_layer=0, top_k = 100, pic_overlay=False):
@@ -35,18 +35,19 @@ class ExpVisualizer():
 
     def show_cmp_results(self, img):
         """Show `ori_img`, `squeeze_mean_channel(all output stages)`, `upsample and overlay heatmap img(all output stages)`."""
+        img_path = img
 
-        feat = self.visualizer._forward(self.visualizer.model.backbone, img=img)
+        feat = self.visualizer._forward(self.visualizer.model.backbone, img=img_path)
         output_stages = len(feat)  # channels : (256, 512, 1024, 2048) and indices: [0, 1, 2, 3] for fpn
 
-        image = Image.open(img)
+        image = Image.open(img_path)
         _image = np.array(image)
 
         row, col = (3, output_stages)
 
         _resize_shape = (_image.shape[0], _image.shape[1])
 
-        plt.figure(frameon=False, figsize=(10, 8))
+        plt.figure(frameon=False, figsize=(15, 12))
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         ind = 1
@@ -83,13 +84,14 @@ class ExpVisualizer():
                 plt.ylabel(f"Heatmap")
             _feature = feat[i].squeeze()
             heatmap = self.visualizer.draw_featmap(_feature, _image, channel_reduction='squeeze_mean', alpha=0.5, resize_shape=_resize_shape)
+            result = self.visualizer.get_pred(img_path)
+            result_heatmap = self.visualizer.draw_dt_gt(
+                name='result',
+                image=heatmap,
+                data_sample=result
+            )
             plt.title(f"({_image.shape[0]} x {_image.shape[1]})", fontsize=10)
-            fake_bboxes = np.array([[100, 90, 345, 140], [40, 60, 210, 440]])
-            # get bboxes rects 
-            rects = self.visualizer.draw_bboxes(fake_bboxes, edge_colors='#9400D3')
-            for rect in rects:
-                ax.add_patch(rect)
-            plt.imshow(heatmap)
+            plt.imshow(result_heatmap)
             ind += 1
         
         plt.tight_layout()
@@ -108,11 +110,11 @@ if __name__ == '__main__':
     pic_overlay = False
 
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
-    # vis.show_cmp_results(img=img)
-    dataset = vis.dataset
-    for data in dataset:
-        print(data)
-        print(data)
+    vis.show_cmp_results(img=img)
+    # dataset = vis.dataset
+    # for data in dataset:
+    #     print(data)
+    #     print(data)
 
 
 

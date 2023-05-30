@@ -17,8 +17,8 @@ from mmengine.visualization.utils import (check_type, check_type_and_length,
                                           img_from_canvas, tensor2ndarray,
                                           value2list, wait_continue)
 
-
-class AAVisualizer():
+@DeprecationWarning("It does not used for this project anymore.")
+class DropVisualizer():
     """ Visualizer tools for Adversarial Attack."""
 
     def __init__(self, cfg_file, ckpt_path, device='cuda:0', fig_show_cfg=dict(frameon=False)) -> None:

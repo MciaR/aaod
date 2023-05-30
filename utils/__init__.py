@@ -1,1 +1,1 @@
-from .aa_visulizer import AAVisualizer
+from .aa_visualizer import AAVisualizer
