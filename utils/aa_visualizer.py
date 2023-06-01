@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import warnings
+import matplotlib.patches as patches
 
 from mmcv.transforms import Compose
 from mmdet.registry import DATASETS
@@ -12,7 +13,7 @@ from mmdet.utils import get_test_pipeline_cfg
 from mmdet.apis import init_detector, inference_detector
 from mmdet.visualization import DetLocalVisualizer
 from mmdet.structures import DetDataSample
-from mmengine.visualization.utils import img_from_canvas
+from mmengine.visualization.utils import img_from_canvas, check_type, tensor2ndarray
 
 
 class AAVisualizer(DetLocalVisualizer):
@@ -354,3 +355,34 @@ class AAVisualizer(DetLocalVisualizer):
             image = img_from_canvas(fig.canvas)
             plt.close(fig)
             return image
+        
+    def draw_bboxes_with_patch(self, 
+                    bboxes: Union[np.ndarray, torch.Tensor],
+                    edge_colors: str,
+                    ):
+        """Draw single or multiple bboxes.
+        
+        Args:
+            bboxes (Union[np.ndarray| torch.Tensor]): bboxes list, (x1, y1, w, h).
+            edge_colors (str): such as `#9400D3`
+
+        Return:
+            rect (Object): patches object.
+        """
+
+        check_type('bboxes', bboxes, (np.ndarray, torch.Tensor))
+        bboxes = tensor2ndarray(bboxes)
+
+        if len(bboxes.shape) == 1:
+            bboxes = bboxes[None]
+        assert bboxes.shape[-1] == 4, (
+            f'The shape of `bboxes` should be (N, 4), but got {bboxes.shape}')
+
+        assert (bboxes[:, 0] <= bboxes[:, 2]).all() and (bboxes[:, 1] <=
+                                                         bboxes[:, 3]).all()
+        rects = []
+        for bbox in bboxes:
+            rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2], bbox[3], linewidth=1, edgecolor=edge_colors, facecolor='none')
+            rects.append(rect)
+
+        return rects
