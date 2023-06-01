@@ -43,13 +43,15 @@ class ExpVisualizer():
             img=None,
             data_samples=None,
             save=False,
-            stage='backbone'):
+            stage='backbone',
+            grey=False):
         """Show `ori_img`, `squeeze_mean_channel(all output stages)`, `upsample and overlay heatmap img(all output stages)`.
         Args:
             img (str): path of img.
             data_samples (DetDataSample): e.g. dataset[0]['data_sample'].
             save (bool): whether save pic. if it is True, pic will not be shown when running.
             model (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'fpn'` - `model.fpn`.
+            grey (bool): `True` means return greymap, else return heatmap.
 
         """
         assert img is not None or data_samples is not None, \
@@ -63,10 +65,13 @@ class ExpVisualizer():
         feat = self.visualizer._forward(self.visualizer.model.backbone, img=img_path)
         if stage == 'neck':
             feat = self.visualizer.model.neck(feat)
-        elif stage == 'head':
-            feat = self.visualizer.model.neck(feat)
-            feat = self.visualizer.model.head(feat)
+        # TODO: add head forward
+        # elif stage == 'head':
+        #     feat = self.visualizer.model.neck(feat)
+        #     feat = self.visualizer.model.head(feat)
+
         output_stages = len(feat)  # channels : (256, 512, 1024, 2048) and indices: [0, 1, 2, 3] for fpn
+
 
         image = Image.open(img_path)
         _image = np.array(image)
@@ -105,7 +110,7 @@ class ExpVisualizer():
             if i == 0:
                 plt.ylabel(f"Feature map (mean)")
             _feature = feat[i].squeeze()
-            feature_map = self.visualizer.draw_featmap(_feature, channel_reduction='squeeze_mean')
+            feature_map = self.visualizer.draw_featmap(_feature, channel_reduction='squeeze_mean', grey=grey)
             plt.title(f"{tuple(_feature.shape)}", fontsize=10)
             plt.imshow(feature_map)
             ind += 1
@@ -118,7 +123,7 @@ class ExpVisualizer():
             if i == 0:
                 plt.ylabel(f"Heatmap")
             _feature = feat[i].squeeze()
-            heatmap = self.visualizer.draw_featmap(_feature, _image, channel_reduction='squeeze_mean', alpha=0.5, resize_shape=_resize_shape)
+            heatmap = self.visualizer.draw_featmap(_feature, _image, channel_reduction='squeeze_mean', alpha=0.5, resize_shape=_resize_shape, grey=grey)
             result = self.visualizer.get_pred(img_path)
             result_heatmap = self.visualizer.draw_dt_gt(
                 name='result',
@@ -151,7 +156,7 @@ if __name__ == '__main__':
 
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
     dataset = vis.dataset
-    vis.show_cmp_results(data_samples=dataset[0]['data_samples'], stage='neck', save=True)
+    vis.show_cmp_results(data_samples=dataset[0]['data_samples'], stage='backbone')
     # vis.show_cmp_results(img=img)
     # dataset = vis.dataset
     # for data in dataset:

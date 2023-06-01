@@ -199,9 +199,10 @@ class AAVisualizer(DetLocalVisualizer):
         norm_img = cv2.normalize(feat_map, norm_img, 0, 255, cv2.NORM_MINMAX)
         norm_img = np.asarray(norm_img, dtype=np.uint8)
         if grey:
-            heat_img = norm_img
-        heat_img = cv2.applyColorMap(norm_img, cv2.COLORMAP_JET)
-        heat_img = cv2.cvtColor(heat_img, cv2.COLOR_BGR2RGB)
+            heat_img = np.stack((norm_img,) * 3, -1)
+        else:
+            heat_img = cv2.applyColorMap(norm_img, cv2.COLORMAP_JET)
+            heat_img = cv2.cvtColor(heat_img, cv2.COLOR_BGR2RGB)
         if img is not None:
             heat_img = cv2.addWeighted(img, 1 - alpha, heat_img, alpha, 0)
         return heat_img
