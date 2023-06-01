@@ -45,4 +45,9 @@ class AAResNet(ResNet):
             x = res_layer(x)
             if i in self.out_indices:
                 outs.append(x)
+        outs = self.attack_method(outs)
         return tuple(outs)
+    
+    def attack_method(self, bb_outputs):
+        """ Find mean featmap max and min activate value pixel, and switch them."""
+        

@@ -2,14 +2,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+from attack import ELAttack
 from visualizer import AAVisualizer
 from PIL import Image
 
 
 class ExpVisualizer():
-    """Visualizer for get exp results."""
-    def __init__(self, cfg_file, ckpt_file):
-        self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
+    """Visualizer for get exp results.
+
+    init:
+        use_attack (bool): if it is `True`, then will be initialize `ELAttack`.
+    """
+    def __init__(self, cfg_file, ckpt_file, use_attack=False):
+        self.use_attack = use_attack
+        if self.use_attack:
+            setattr(self, 'attack', ELAttack(cfg_file=cfg_file, ckpt_file=ckpt_file))   
+            self.visualizer = self.attack.visualizer
+            self.runner = self.attack
+            self.model = self.attack.model
+        else:
+            self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
+            self.runner = self.visualizer
+            self.model = self.visualizer.model
+
         self.dataset = self.visualizer.get_dataset()
     
     @staticmethod
@@ -19,7 +34,7 @@ class ExpVisualizer():
     def show_single_pic_feats(self, img, show_layer=0, top_k = 100, pic_overlay=False):
         """Show `top_k` channels of featuremap of a pic."""
 
-        feat = self.visualizer._forward(self.visualizer.model.backbone, img=img)
+        feat = self.runner._forward(self.model.backbone, img=img)
 
         image = Image.open(img)
         _image = np.array(image)
@@ -48,6 +63,7 @@ class ExpVisualizer():
             save (bool): whether save pic. if it is True, pic will not be shown when running.
             model (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'fpn'` - `model.fpn`.
             grey (bool): `True` means return greymap, else return heatmap.
+            attack (bool): `True` means using attack method.
 
         """
         assert img is not None or data_samples is not None, \
@@ -57,10 +73,9 @@ class ExpVisualizer():
         else:
             img_path = data_samples.img_path
         
-
-        feat = self.visualizer._forward(self.visualizer.model.backbone, img=img_path)
+        feat = self.runner._forward(self.model.backbone, img=img_path)
         if stage == 'neck':
-            feat = self.visualizer.model.neck(feat)
+            feat = self.model.neck(feat)
         # TODO: add head forward
         # elif stage == 'head':
         #     feat = self.visualizer.model.neck(feat)
