@@ -1,4 +1,5 @@
 # dataset settings
+# its VOC 2007 and VOC 2012
 dataset_type = 'VOCDataset'
 data_root = 'data/VOC2007/'
 
@@ -53,7 +54,7 @@ train_dataloader = dict(
                 dict(
                     type=dataset_type,
                     data_root=data_root,
-                    ann_file='VOC2007/ImageSets/Main/trainval.txt',
+                    ann_file='data/VOCdevkit/VOC2007/ImageSets/Main/trainval.txt',
                     data_prefix=dict(sub_data_root='VOC2007/'),
                     filter_cfg=dict(
                         filter_empty_gt=True, min_size=32, bbox_min_size=32),
@@ -62,7 +63,7 @@ train_dataloader = dict(
                 dict(
                     type=dataset_type,
                     data_root=data_root,
-                    ann_file='VOC2012/ImageSets/Main/trainval.txt',
+                    ann_file='data/VOCdevkit/VOC2012/ImageSets/Main/trainval.txt',
                     data_prefix=dict(sub_data_root='VOC2012/'),
                     filter_cfg=dict(
                         filter_empty_gt=True, min_size=32, bbox_min_size=32),
@@ -79,7 +80,7 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='VOC2007/ImageSets/Main/test.txt',
+        ann_file='data/VOCdevkit/VOC2007_test/ImageSets/Main/test.txt',
         data_prefix=dict(sub_data_root='VOC2007/'),
         test_mode=True,
         pipeline=test_pipeline,
