@@ -45,7 +45,7 @@ class AAResNet(ResNet):
             x = res_layer(x)
             if i in self.out_indices:
                 outs.append(x)
-        outs = self.attack_method(outs)
+        # outs = self.attack_method(outs)
         return tuple(outs)
     
     def attack_method(self, bb_outputs):
