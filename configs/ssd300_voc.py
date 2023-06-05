@@ -1,5 +1,5 @@
 _base_ = [
-    'models/ssd300.py', 'base/voc_datasets.py',
+    'ssd300.py', 'base/voc_datasets.py',
     'base/schedule_2x.py', 'base/default_runtime.py'
 ]
 # modify num_classes to voc classes
@@ -8,6 +8,7 @@ model = dict(
         num_classes=20
     )
 )
+batch_size = 4
 # dataset settings
 input_size = 300
 train_pipeline = [
@@ -42,11 +43,11 @@ test_pipeline = [
                    'scale_factor'))
 ]
 train_dataloader = dict(
-    batch_size=8,
+    batch_size=batch_size,
     num_workers=2,
     batch_sampler=None,
 )
-val_dataloader = dict(batch_size=8, dataset=dict(pipeline=test_pipeline))
+val_dataloader = dict(batch_size=batch_size, dataset=dict(pipeline=test_pipeline))
 test_dataloader = val_dataloader
 
 # optimizer
