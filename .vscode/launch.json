@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "R:/adversarialAttack/paper/aaod/tools/train.py",
             "args": [
-                "model/faster_rcnn_r101_fpn.py",
+                "configs/ssd300_voc.py",
                 "--work-dir",
                 ".work_dir"
             ],

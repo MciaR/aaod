@@ -1,4 +1,5 @@
 data
+.vscode
 *work_dir
 __pycache__
 test
