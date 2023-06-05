@@ -87,7 +87,7 @@ class ExpVisualizer():
         image = Image.open(img_path)
         _image = np.array(image)
 
-        row, col = (3, output_stages)
+        row, col = (4, output_stages) if self.use_attack else (3, output_stages)
 
         _resize_shape = (_image.shape[0], _image.shape[1])
 
@@ -146,6 +146,31 @@ class ExpVisualizer():
             plt.imshow(result_heatmap)
             ind += 1
         
+        # ====== Fourth row: attack results ======
+        if self.use_attack:
+            ad_image_path = self.runner.attack(img_path)
+            ad_result = self.visualizer.get_pred(ad_image_path)
+
+            ad_image = Image.open(ad_image_path)
+            ad_image = np.array(ad_image)
+
+            ad_pred = self.visualizer.draw_dt_gt(
+                name='attack',
+                image=ad_image,
+                draw_gt=False,
+                data_sample=ad_result,
+                pred_score_thr=0.3)
+        
+            for i in range(col):
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                if i == 0:
+                    plt.ylabel(f"Attack results")
+                plt.title(f"({ad_image.shape[0]} x {ad_image.shape[1]})", fontsize=10)
+                plt.imshow(ad_pred)
+                ind += 1        
+
         plt.tight_layout()
         if save:
             img_name = img_path.split('/')[-1].split('.')[0]

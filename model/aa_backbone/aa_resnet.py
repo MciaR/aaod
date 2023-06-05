@@ -1,3 +1,5 @@
+import torch
+
 from mmdet.registry import MODELS
 from mmdet.models.backbones import ResNet
 
@@ -48,6 +50,14 @@ class AAResNet(ResNet):
         # outs = self.attack_method(outs)
         return tuple(outs)
     
-    def attack_method(self, bb_outputs):
+    def attack_method(self, bb_outputs, topk = 1):
         """ Find mean featmap max and min activate value pixel, and switch them."""
+        out_len = len(bb_outputs)
+        for feat_maps in bb_outputs:
+            # feat_maps: (1, C, H, W)
+            feat_maps = feat_maps.unqueeze()
+            mean_featmap = torch.mean(feat_maps, dim=0)
+            values, indices = torch.topk(mean_featmap, 1)
+            mean_featmap
+
         
