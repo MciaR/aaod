@@ -46,6 +46,10 @@ train_dataloader = dict(
     batch_size=batch_size,
     num_workers=2,
     batch_sampler=None,
+    dataset=dict(
+        type='RepeatDataset',
+        times=10,     
+    )
 )
 val_dataloader = dict(batch_size=batch_size, dataset=dict(pipeline=test_pipeline))
 test_dataloader = val_dataloader
