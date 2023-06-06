@@ -4,20 +4,59 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-from visualizer import AAVisualizer
+from mmcv.transforms import Compose
+from mmdet.utils import get_test_pipeline_cfg
 from mmdet.apis import init_detector
 
 
 class ELAttack():
+    """Explainable Location Adversarial Attack."""
     def __init__(self,
-                 cfg_file, 
-                 ckpt_file, ) -> None:
-        self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
-        self.model = self.visualizer.model
-        self.device = self.visualizer.device
+                 cfg_file='configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py', 
+                 ckpt_file='pretrained/faster_rcnn/faster_rcnn_r101_fpn_dconv_c3-c5_1x_coco_20200203-1377f13d.pth',
+                 device='cuda:0') -> None:
+        self.device = device
+        self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file)
 
-    def _forward(self, model, img):
-        return self.visualizer._forward(model=model, img=img)
+    def get_model(self, cfg_file, ckpt_path):
+        model = init_detector(cfg_file, ckpt_path, device=self.device)
+        return model 
+    
+    def get_preprocess(self):
+        """Get data preprocess pipeline"""
+        cfg = self.model.cfg
+        test_pipeline = get_test_pipeline_cfg(cfg)
+        test_pipeline = Compose(test_pipeline)
+
+        return test_pipeline
+    
+    def _forward_backbone(self, img):
+        """ Get model output.
+        
+        Args:
+            model (nn.Module): such as `model.backbone`, `model.head`.
+            imgs (str): img path. 
+        Return:
+            feats (List[Tensor]): List of model output. 
+        """
+        preprocess = self.get_preprocess()
+
+        # prepare data
+        if isinstance(img, np.ndarray):
+            # TODO: remove img_id.
+            data_ = dict(img=img, img_id=0)
+        else:
+            # TODO: remove img_id.
+            data_ = dict(img_path=img, img_id=0)
+        # build the data pipeline
+        data_ = preprocess(data_)
+        input_data = data_['inputs'].float().unsqueeze(0).to(self.device)
+
+        # forward the model
+        with torch.no_grad():
+            feat = self.model.backbone(input_data)
+
+        return feat
     
     def attack(self, img, attack_method='dcn_attack'):
         """Call different attack method to generate adversarial sample."""
@@ -37,7 +76,7 @@ class ELAttack():
         assert os.path.exists(ad_img_path), \
             f'`{ad_img_path}` does not save successfully!.'
         
-        return ad_img_path
+        return pertub_img_path, ad_img_path
 
     def dcn_attack(self, img, out_ind=[1, 2, 3], alpha=0.35):
         """Simply use dcn output as noise to add to ori img to generate adversarial sample.
@@ -50,11 +89,7 @@ class ELAttack():
         Return:
             ad_result (torch.Tensor | np.Numpy): adversarial sample.
         """
-        dcn_cfg = 'configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py'
-        dcn_ckpt = 'pretrained/faster_rcnn/faster_rcnn_r101_fpn_dconv_c3-c5_1x_coco_20200203-1377f13d.pth'
-        model = init_detector(dcn_cfg, dcn_ckpt, device='cuda:0')
-
-        result = self.visualizer._forward(model=model.backbone, img=img)
+        result = self._forward_backbone(img)
         image = cv2.imread(img)
         perturbed_image = np.zeros(image.shape)
         per_factor = [0.05, 0.7, 0.25]

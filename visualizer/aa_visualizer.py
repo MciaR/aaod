@@ -58,6 +58,27 @@ class AAVisualizer(DetLocalVisualizer):
         result = inference_detector(self.model, img)
         return result
     
+    def get_multi_level_pred(self, index, datasamples, rescale: bool = True):
+        # extract feature
+        img_path = datasamples.img_path
+        x = self._forward(stage='neck', img=img_path)[index]
+
+        # If there are no pre-defined proposals, use RPN to get proposals
+        if batch_data_samples[0].get('proposals', None) is None:
+            rpn_results_list = self.model.rpn_head.predict(
+                x, batch_data_samples, rescale=False)
+        else:
+            rpn_results_list = [
+                data_sample.proposals for data_sample in batch_data_samples
+            ]
+
+        results_list = self.model.roi_head.predict(
+            x, rpn_results_list, batch_data_samples, rescale=rescale)
+
+        batch_data_samples = self.add_pred_to_datasample(
+            batch_data_samples, results_list)
+        return batch_data_samples
+    
     def draw_dt_gt(
             self,
             name: str,
@@ -142,11 +163,11 @@ class AAVisualizer(DetLocalVisualizer):
         # save it as a video during video inference.
         return drawn_img
     
-    def _forward(self, model, img):
+    def _forward(self, stage, img):
         """ Get model output.
         
         Args:
-            model (nn.Module): such as `model.backbone`, `model.head`.
+            stage (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
             imgs (str): img path. 
         Return:
             feats (List[Tensor]): List of model output. 
@@ -166,7 +187,11 @@ class AAVisualizer(DetLocalVisualizer):
 
         # forward the model
         with torch.no_grad():
-            feat = model(input_data)
+            if stage == 'backbone':
+                feat = self.model.backbone(input_data)
+            else:
+                feat = self.model.backbone(input_data)
+                feat = self.model.neck(feat)
 
         return feat
 
