@@ -47,7 +47,7 @@ class ExpVisualizer():
     def show_stage_results(
             self,
             img=None,
-            data_samples=None,
+            data_sample=None,
             save=False,
             grey=False,
             overlaid=False,
@@ -55,33 +55,30 @@ class ExpVisualizer():
         """Show `ori_img`, `squeeze_mean_channel(backbone)`, `squeeze_mean_channel(neck)`, `final results of each level of extract_feature`.
         Args:
             img (str): path of img.
-            data_samples (DetDataSample): e.g. dataset[0]['data_sample'].
+            data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
             save (bool): whether save pic. if it is True, pic will not be shown when running.
             stage (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
             grey (bool): `True` means return greymap, else return heatmap.
             attack (bool): `True` means using attack method.
 
         """
-        assert img is not None or data_samples is not None, \
-            f'`img` and `data_samples` cannot be None both.'
-        if data_samples is None:
+        assert img is not None or data_sample is not None, \
+            f'`img` and `data_sample` cannot be None both.'
+        if data_sample is None:
             img_path = img
         else:
-            img_path = data_samples.img_path
+            img_path = data_sample.img_path
 
         backbone_feat = self.runner._forward(stage='backbone', img=img_path)
         neck_feat = self.runner._forward(stage='neck', img=img_path)
 
         output_stages = len(neck_feat)  # channels : (256, 512, 1024, 2048) and indices: [0, 1, 2, 3] for fpn
 
-
         image = Image.open(img_path)
         _image = np.array(image)
         overlaid_image = _image if overlaid else None
 
         row, col = (4, output_stages)
-
-        _resize_shape = (_image.shape[0], _image.shape[1])
 
         plt.figure(frameon=False, figsize=(10, 8))
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
@@ -90,7 +87,7 @@ class ExpVisualizer():
         gt_image = self.visualizer.draw_dt_gt(
             name='gt',
             image=_image,
-            data_sample=data_samples,
+            data_sample=data_sample,
             draw_gt=True,
             draw_pred=False
         )
@@ -133,7 +130,21 @@ class ExpVisualizer():
             ind += 1
 
         # ====== Fourth row: each level pred results of neck ======
-
+        for i in range(col):
+            plt.subplot(row, col, ind)
+            plt.xticks([],[])
+            plt.yticks([],[])
+            if i == 0:
+                plt.ylabel(f"Pred result")
+            pred_res = self.visualizer.get_multi_level_pred(index=i, data_sample=data_sample)
+            neck_pred = self.visualizer.draw_dt_gt(
+                name='pred',
+                image=_image,
+                draw_gt=False,
+                data_sample=pred_res,
+                pred_score_thr=0.3)
+            plt.title(f"Fpn {i} pred", fontsize=10)
+            plt.imshow(neck_pred)
 
         plt.tight_layout()
         if save:
@@ -145,24 +156,24 @@ class ExpVisualizer():
             self, 
             model_name,
             img=None,
-            data_samples=None,
+            data_sample=None,
             save=False):
         """Show `ori_img`, `noise`, `adv_samples`, `attack_results`.
         Args:
             img (str): path of img.
             model_name (str): name of infer model.
-            data_samples (DetDataSample): e.g. dataset[0]['data_sample'].
+            data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
             save (bool): whether save pic. if it is True, pic will not be shown when running.
         """
         assert self.use_attack, \
             f'`use_attack` must be `True` when calling function `show_attack_results.`'
         
-        assert img is not None or data_samples is not None, \
-            f'`img` and `data_samples` cannot be None both.'
-        if data_samples is None:
+        assert img is not None or data_sample is not None, \
+            f'`img` and `data_sample` cannot be None both.'
+        if data_sample is None:
             img_path = img
         else:
-            img_path = data_samples.img_path
+            img_path = data_sample.img_path
     
         row, col = (1, 4)
         plt.figure(frameon=False, figsize=(10, 8))

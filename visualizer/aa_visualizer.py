@@ -9,10 +9,11 @@ import matplotlib.patches as patches
 
 from mmcv.transforms import Compose
 from mmdet.registry import DATASETS
-from mmdet.utils import get_test_pipeline_cfg
+from mmdet.utils import get_test_pipeline_cfg, InstanceList
 from mmdet.apis import init_detector, inference_detector
 from mmdet.visualization import DetLocalVisualizer
-from mmdet.structures import DetDataSample
+from mmdet.structures import DetDataSample, SampleList
+from mmdet.models.utils import samplelist_boxtype2tensor
 from mmengine.visualization.utils import img_from_canvas, check_type, tensor2ndarray
 
 
@@ -58,10 +59,12 @@ class AAVisualizer(DetLocalVisualizer):
         result = inference_detector(self.model, img)
         return result
     
-    def get_multi_level_pred(self, index, datasamples, rescale: bool = True):
+    def get_multi_level_pred(self, index, data_sample, rescale: bool = True):
         # extract feature
-        img_path = datasamples.img_path
-        x = self._forward(stage='neck', img=img_path)[index]
+        img_path = data_sample.img_path
+        x = self._forward(stage='neck', img=img_path)
+
+        batch_data_samples = [data_sample]
 
         # If there are no pre-defined proposals, use RPN to get proposals
         if batch_data_samples[0].get('proposals', None) is None:
@@ -77,7 +80,7 @@ class AAVisualizer(DetLocalVisualizer):
 
         batch_data_samples = self.add_pred_to_datasample(
             batch_data_samples, results_list)
-        return batch_data_samples
+        return batch_data_samples[0]
     
     def draw_dt_gt(
             self,
@@ -411,3 +414,31 @@ class AAVisualizer(DetLocalVisualizer):
             rects.append(rect)
 
         return rects
+    
+    def add_pred_to_datasample(self, data_samples: SampleList,
+                               results_list: InstanceList) -> SampleList:
+        """Add predictions to `DetDataSample`.
+
+        Args:
+            data_samples (list[:obj:`DetDataSample`], optional): A batch of
+                data samples that contain annotations and predictions.
+            results_list (list[:obj:`InstanceData`]): Detection results of
+                each image.
+
+        Returns:
+            list[:obj:`DetDataSample`]: Detection results of the
+            input images. Each DetDataSample usually contain
+            'pred_instances'. And the ``pred_instances`` usually
+            contains following keys.
+
+                - scores (Tensor): Classification scores, has a shape
+                    (num_instance, )
+                - labels (Tensor): Labels of bboxes, has a shape
+                    (num_instances, ).
+                - bboxes (Tensor): Has a shape (num_instances, 4),
+                    the last dimension 4 arrange as (x1, y1, x2, y2).
+        """
+        for data_sample, pred_instances in zip(data_samples, results_list):
+            data_sample.pred_instances = pred_instances
+        samplelist_boxtype2tensor(data_samples)
+        return data_samples

@@ -31,5 +31,7 @@ import matplotlib.pyplot as plt
 # plt.imshow(results[0].numpy())
 # plt.show()
 
-
+pics = torch.rand((3, 4))
+pics = pics.unsqueeze(0)
+print(pics.shape)
 
