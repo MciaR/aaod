@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-epsilons = [0, .05, .1, .15, .2, .25, .3]
+epsilons = [.1, .15, .2, .25, .3]
 pretrained_model = "R:/adversarialAttack/paper/aaod/data/pt/mnist_cnn.pt"
 use_cuda = True
 
