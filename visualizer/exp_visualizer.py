@@ -143,18 +143,16 @@ class ExpVisualizer():
 
     def show_attack_results(
             self, 
+            model_name,
             img=None,
             data_samples=None,
             save=False):
         """Show `ori_img`, `noise`, `adv_samples`, `attack_results`.
         Args:
             img (str): path of img.
+            model_name (str): name of infer model.
             data_samples (DetDataSample): e.g. dataset[0]['data_sample'].
             save (bool): whether save pic. if it is True, pic will not be shown when running.
-            stage (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
-            grey (bool): `True` means return greymap, else return heatmap.
-            attack (bool): `True` means using attack method.
-
         """
         assert self.use_attack, \
             f'`use_attack` must be `True` when calling function `show_attack_results.`'
@@ -196,7 +194,7 @@ class ExpVisualizer():
             plt.xticks([],[])
             plt.yticks([],[])
             if i == 0:
-                plt.ylabel(f"FR_R101_COCO")
+                plt.ylabel(model_name)
             plt.title(f'{image_name[i]}', fontsize=10)
             plt.imshow(image_list[i])  
 
