@@ -129,22 +129,22 @@ class ExpVisualizer():
             plt.imshow(feature_map)
             ind += 1
 
-        # ====== Fourth row: each level pred results of neck ======
-        for i in range(col):
-            plt.subplot(row, col, ind)
-            plt.xticks([],[])
-            plt.yticks([],[])
-            if i == 0:
-                plt.ylabel(f"Pred result")
-            pred_res = self.visualizer.get_multi_level_pred(index=i, data_sample=data_sample)
-            neck_pred = self.visualizer.draw_dt_gt(
-                name='pred',
-                image=_image,
-                draw_gt=False,
-                data_sample=pred_res,
-                pred_score_thr=0.3)
-            plt.title(f"Fpn {i} pred", fontsize=10)
-            plt.imshow(neck_pred)
+        # ====== Fourth row: each level pred results of neck ======     
+        # for i in range(col):
+        #     plt.subplot(row, col, ind)
+        #     plt.xticks([],[])
+        #     plt.yticks([],[])
+        #     if i == 0:
+        #         plt.ylabel(f"Pred result")
+        #     pred_res = self.visualizer.get_multi_level_pred(index=i, data_sample=data_sample)
+        #     neck_pred = self.visualizer.draw_dt_gt(
+        #         name='pred',
+        #         image=_image,
+        #         draw_gt=False,
+        #         data_sample=pred_res,
+        #         pred_score_thr=0.3)
+        #     plt.title(f"Fpn {i} pred", fontsize=10)
+        #     plt.imshow(neck_pred)
 
         plt.tight_layout()
         if save:

@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "R:/adversarialAttack/paper/aaod/tools/train.py",
             "args": [
-                "configs/ssd300_voc.py",
+                "configs/fr_vgg16_coco.py",
                 "--work-dir",
                 ".work_dir"
             ],

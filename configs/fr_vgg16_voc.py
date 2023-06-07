@@ -1,7 +1,10 @@
 _base_ = ['./base/voc_datasets.py', './base/default_runtime.py', './base/schedule_1x.py']
 
 # custom settings, need import module, so it will excute the registry
-custom_imports = dict(imports=['model.aa_backbone.aa_resnet'], allow_failed_imports=False)
+custom_imports = dict(imports=['model.aa_backbone.aa_resnet', 'mmpretrain.models'], allow_failed_imports=False)
+
+# load model pretrained on ImageNet
+pretrained = 'https://download.openmmlab.com/mmclassification/v0/vgg/vgg16_batch256_imagenet_20210208-db26f1a5.pth'
 
 # model settings
 model = dict(
@@ -13,29 +16,22 @@ model = dict(
         bgr_to_rgb=True,
         pad_size_divisor=32),
     backbone=dict(
-        type='AAResNet',
-        depth=101,
-        num_stages=4,
-        out_indices=(0, 1, 2, 3),
-        frozen_stages=1,
+        type='mmpretrain.VGG',
+        depth=16,
+        out_indices=(4, ), # only output the 4th stage.
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
-        style='pytorch',
-        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet101')),
-    neck=dict(
-        type='FPN',
-        in_channels=[256, 512, 1024, 2048],
-        out_channels=256,
-        num_outs=5),
+        init_cfg=dict(type='Pretrained', checkpoint=pretrained, prefix='backbone.')),
+    neck=None,
     rpn_head=dict(
         type='RPNHead',
-        in_channels=256,
+        in_channels=512,
         feat_channels=256,
         anchor_generator=dict(
             type='AnchorGenerator',
             scales=[8],
             ratios=[0.5, 1.0, 2.0],
-            strides=[4, 8, 16, 32, 64]),
+            strides=[16]),
         bbox_coder=dict(
             type='DeltaXYWHBBoxCoder',
             target_means=[.0, .0, .0, .0],
@@ -49,13 +45,13 @@ model = dict(
             type='SingleRoIExtractor',
             roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
             out_channels=256,
-            featmap_strides=[4, 8, 16, 32]),
+            featmap_strides=[16]),
         bbox_head=dict(
             type='Shared2FCBBoxHead',
-            in_channels=256,
+            in_channels=512,
             fc_out_channels=1024,
             roi_feat_size=7,
-            num_classes=80, # 训练的结果没问题，说明这里大于20也是ok的。
+            num_classes=80,
             bbox_coder=dict(
                 type='DeltaXYWHBBoxCoder',
                 target_means=[0., 0., 0., 0.],

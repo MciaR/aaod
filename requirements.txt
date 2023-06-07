@@ -2,6 +2,7 @@ matplotlib==3.7.1
 mmcv==2.0.0
 mmdet==3.0.0
 mmengine==0.7.3
+mmpretrain==1.0.0rc8
 numpy==1.24.3
 opencv_python==4.7.0.72
 Pillow==9.5.0

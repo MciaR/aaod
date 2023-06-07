@@ -60,6 +60,7 @@ class AAVisualizer(DetLocalVisualizer):
         return result
     
     def get_multi_level_pred(self, index, data_sample, rescale: bool = True):
+        """Get multi level pred results."""
         # extract feature
         img_path = data_sample.img_path
         x = self._forward(stage='neck', img=img_path)
