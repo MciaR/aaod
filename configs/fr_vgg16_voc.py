@@ -19,8 +19,6 @@ model = dict(
         type='mmpretrain.VGG',
         depth=16,
         out_indices=(4, ), # only output the 4th stage.
-        norm_cfg=dict(type='BN', requires_grad=True),
-        norm_eval=True,
         init_cfg=dict(type='Pretrained', checkpoint=pretrained, prefix='backbone.')),
     neck=None,
     rpn_head=dict(

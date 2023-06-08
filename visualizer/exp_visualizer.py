@@ -70,15 +70,19 @@ class ExpVisualizer():
             img_path = data_sample.img_path
 
         backbone_feat = self.runner._forward(stage='backbone', img=img_path)
-        neck_feat = self.runner._forward(stage='neck', img=img_path)
 
-        output_stages = len(neck_feat)  # channels : (256, 512, 1024, 2048) and indices: [0, 1, 2, 3] for fpn
+        if self.model.with_neck:
+            neck_feat = self.runner._forward(stage='neck', img=img_path)
+        else:
+            neck_feat = []
+
+        output_stages = max(len(neck_feat), len(backbone_feat))  # channels : (256, 512, 1024, 2048) and indices: [0, 1, 2, 3] for fpn
 
         image = Image.open(img_path)
         _image = np.array(image)
         overlaid_image = _image if overlaid else None
 
-        row, col = (4, output_stages)
+        row, col = (4, output_stages) if self.model.with_neck else (3, output_stages)
 
         plt.figure(frameon=False, figsize=(10, 8))
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
@@ -117,19 +121,32 @@ class ExpVisualizer():
             ind += 1
 
         # ====== Third row: neck ======
-        for i in range(col):
-            plt.subplot(row, col, ind)
-            plt.xticks([],[])
-            plt.yticks([],[])
-            if i == 0:
-                plt.ylabel(f"Fpn featmap")
-            _feature = neck_feat[i].squeeze()
-            feature_map = self.visualizer.draw_featmap(_feature, overlaid_image, channel_reduction='squeeze_mean', grey=grey)
-            plt.title(f"{tuple(_feature.shape)}", fontsize=10)
-            plt.imshow(feature_map)
-            ind += 1
+        if self.model.with_neck:
+            for i in range(col):
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                if i == 0:
+                    plt.ylabel(f"Fpn featmap")
+                _feature = neck_feat[i].squeeze()
+                feature_map = self.visualizer.draw_featmap(_feature, overlaid_image, channel_reduction='squeeze_mean', grey=grey)
+                plt.title(f"{tuple(_feature.shape)}", fontsize=10)
+                plt.imshow(feature_map)
+                ind += 1
 
-        # ====== Fourth row: each level pred results of neck ======     
+        # ====== Fourth row: each level pred results of neck ======   
+        plt.subplot(row, col, ind)
+        plt.xticks([],[])
+        plt.yticks([],[])
+        plt.ylabel(f"Fpn featmap")
+        pred = self.visualizer.get_pred(img=img_path)
+        pred_res = self.visualizer.draw_dt_gt(
+            name='pred',
+            image=_image,
+            draw_gt=False,
+            data_sample=pred,
+            pred_score_thr=0.3)      
+        plt.imshow(pred_res)          
         # for i in range(col):
         #     plt.subplot(row, col, ind)
         #     plt.xticks([],[])
