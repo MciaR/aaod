@@ -7,35 +7,15 @@ import numpy as np
 from attack import BaseAttack
 
 
-class ELAttack(BaseAttack):
-    """Explainable Location Adversarial Attack."""
+class DCFAttack(BaseAttack):
+    """Deformable Convluation Featuremap Attack."""
     def __init__(self,
                  cfg_file='configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py', 
                  ckpt_file='pretrained/faster_rcnn/faster_rcnn_r101_fpn_dconv_c3-c5_1x_coco_20200203-1377f13d.pth',
                  device='cuda:0') -> None:
         super().__init__(cfg_file=cfg_file, ckpt_file=ckpt_file)
 
-    def attack(self, img, attack_method='dcn_attack'):
-        """Call different attack method to generate adversarial sample."""
-        ad_result = None
-        save_dir = 'ad_result/' + attack_method
-        img_name = img.split('/')[-1]
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        ad_img_path = os.path.join(save_dir, img_name)
-        pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name)
-
-        if attack_method == 'dcn_attack':
-            per_image, ad_result = self.dcn_attack(img=img)
-            cv2.imwrite(ad_img_path, ad_result)
-            cv2.imwrite(pertub_img_path, per_image)
-        
-        assert os.path.exists(ad_img_path), \
-            f'`{ad_img_path}` does not save successfully!.'
-        
-        return pertub_img_path, ad_img_path
-
-    def dcn_attack(self, img, out_ind=[3, 4], alpha=0.35):
+    def _attack(self, img, out_ind=[3, 4], alpha=0.35):
         """Simply use dcn output as noise to add to ori img to generate adversarial sample.
         
         Args:

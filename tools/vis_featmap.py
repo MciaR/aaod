@@ -12,7 +12,7 @@ if __name__ == '__main__':
     # config_file = 'configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py'
     # checkpoint_file = 'pretrained/faster_rcnn/faster_rcnn_r101_fpn_dconv_c3-c5_1x_coco_20200203-1377f13d.pth'
 
-    vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True)
+    vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attack_method='dcf')
     show_layer = 3 # (256, 512, 1024, 2048) channels
     top_k = 100
     pic_overlay = False

@@ -2,25 +2,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from attack import ELAttack
+from attack import DCFAttack
 from visualizer import AAVisualizer
 from PIL import Image
 
 
 class ExpVisualizer():
     """Visualizer for get exp results.
-
-    init:
-        use_attack (bool): if it is `True`, then will be initialize `ELAttack`.
+    Args:
+        use_attack (bool): if it is `True`, then will initialize attacker.
+        attack_method (str): `['dcf',]`.
     """
-    def __init__(self, cfg_file, ckpt_file, use_attack=False):
+    def __init__(self, cfg_file, ckpt_file, use_attack=False, attack_method=None):
         self.use_attack = use_attack 
         self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
         self.runner = self.visualizer
         self.model = self.visualizer.model
         self.dataset = self.visualizer.get_dataset()
+        if attack_method == 'dcf':
+            attacker = DCFAttack()
         if self.use_attack:
-            setattr(self, 'attacker', ELAttack())  
+            assert attack_method is not None, \
+                f'when `user_attack` is True, `attack_method` must be set.'
+            setattr(self, 'attacker', attacker)  
     
     @staticmethod
     def get_timestamp():

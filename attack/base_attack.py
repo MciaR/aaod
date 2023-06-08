@@ -106,5 +106,25 @@ class BaseAttack():
 
         return feat
     
-    def attack():
+    def attack(self, img):
+        """Call attack method to generate adversarial sample."""
+        ad_result = None
+        attack_name = os.path.basename(__file__).split('.')[0]
+        save_dir = 'ad_result/' + attack_name
+        img_name = img.split('/')[-1]
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        ad_img_path = os.path.join(save_dir, img_name)
+        pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name)
+
+        per_image, ad_result = self._attack(img=img)
+        cv2.imwrite(ad_img_path, ad_result)
+        cv2.imwrite(pertub_img_path, per_image)
+        
+        assert os.path.exists(ad_img_path), \
+            f'`{ad_img_path}` does not save successfully!.'
+        
+        return pertub_img_path, ad_img_path
+    
+    def _attack(self, img):
         pass
