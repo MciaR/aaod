@@ -1,12 +1,14 @@
 import os
 import cv2
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
 from mmcv.transforms import Compose
 from mmdet.utils import get_test_pipeline_cfg
 from mmdet.apis import init_detector
+from mmengine.registry import MODELS
 
 
 class ELAttack():
@@ -17,12 +19,13 @@ class ELAttack():
                  device='cuda:0') -> None:
         self.device = device
         self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file)
+        self.data_preprocessor = self.get_data_preprocess()
 
     def get_model(self, cfg_file, ckpt_path):
         model = init_detector(cfg_file, ckpt_path, device=self.device)
         return model 
     
-    def get_preprocess(self):
+    def get_test_pipeline(self):
         """Get data preprocess pipeline"""
         cfg = self.model.cfg
         test_pipeline = get_test_pipeline_cfg(cfg)
@@ -30,18 +33,25 @@ class ELAttack():
 
         return test_pipeline
     
-    def _forward_backbone(self, img):
-        """ Get model output.
-        
-        Args:
-            model (nn.Module): such as `model.backbone`, `model.head`.
-            imgs (str): img path. 
-        Return:
-            feats (List[Tensor]): List of model output. 
-        """
-        preprocess = self.get_preprocess()
+    def get_data_preprocess(self):
+        """Get data preprocessor"""
+        data_preprocessor = self.model.data_preprocessor
+        if data_preprocessor is None:
+            data_preprocessor = dict(type='BaseDataPreprocessor')
+        if isinstance(data_preprocessor, nn.Module):
+            data_preprocessor = data_preprocessor
+        elif isinstance(data_preprocessor, dict):
+            data_preprocessor = MODELS.build(data_preprocessor)  
 
-        # prepare data
+        return data_preprocessor   
+    
+    def get_data_from_img(self, img):
+        """Get preprocessed data from img path
+        Args:
+            img (str): path of img.
+        Return:
+            data (dict): the data format can forward model.
+        """
         if isinstance(img, np.ndarray):
             # TODO: remove img_id.
             data_ = dict(img=img, img_id=0)
@@ -49,12 +59,36 @@ class ELAttack():
             # TODO: remove img_id.
             data_ = dict(img_path=img, img_id=0)
         # build the data pipeline
-        data_ = preprocess(data_)
-        input_data = data_['inputs'].float().unsqueeze(0).to(self.device)
+        test_pipeline = self.get_test_pipeline()
+        data_ = test_pipeline(data_)
+
+        data_['inputs'] = [data_['inputs']]
+        data_['data_samples'] = [data_['data_samples']]
+
+
+        data = self.data_preprocessor(data_, False) 
+
+        return data
+    
+    def _forward(self, stage, img):
+        """ Get model output.
+        
+        Args:
+            stage (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
+            imgs (str): img path. 
+        Return:
+            feats (List[Tensor]): List of model output. 
+        """
+        data = self.get_data_from_img(img=img)
+        input_data = data['inputs']
 
         # forward the model
         with torch.no_grad():
-            feat = self.model.backbone(input_data)
+            if stage == 'backbone':
+                feat = self.model.backbone(input_data)
+            else:
+                feat = self.model.backbone(input_data)
+                feat = self.model.neck(feat)
 
         return feat
     
@@ -78,7 +112,7 @@ class ELAttack():
         
         return pertub_img_path, ad_img_path
 
-    def dcn_attack(self, img, out_ind=[1, 2, 3], alpha=0.35):
+    def dcn_attack(self, img, out_ind=[3, 4], alpha=0.35):
         """Simply use dcn output as noise to add to ori img to generate adversarial sample.
         
         Args:
@@ -89,10 +123,10 @@ class ELAttack():
         Return:
             ad_result (torch.Tensor | np.Numpy): adversarial sample.
         """
-        result = self._forward_backbone(img)
+        result = self._forward(stage="neck",img = img)
         image = cv2.imread(img)
         perturbed_image = np.zeros(image.shape)
-        per_factor = [0.05, 0.7, 0.25]
+        per_factor = [0.4, 0.6]
 
         for i in range(len(out_ind)):
             ind = out_ind[i]

@@ -84,7 +84,7 @@ class ExpVisualizer():
 
         row, col = (5, output_stages) if self.model.with_neck else (4, output_stages)
 
-        plt.figure(frameon=False, figsize=(10, 8))
+        plt.figure(frameon=False, figsize=(12, 8), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         ind = 1
@@ -164,7 +164,6 @@ class ExpVisualizer():
             draw_gt=False,
             data_sample=pred_res,
             pred_score_thr=0.3)
-        plt.title(f"Fpn {i} pred", fontsize=10)
         plt.imshow(final_pred) 
 
         plt.tight_layout()
