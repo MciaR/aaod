@@ -47,17 +47,60 @@ class AAResNet(ResNet):
             x = res_layer(x)
             if i in self.out_indices:
                 outs.append(x)
-        # outs = self.attack_method(outs)
+        outs = self.attack_method(outs)
         return tuple(outs)
     
     def attack_method(self, bb_outputs, topk = 1):
         """ Find mean featmap max and min activate value pixel, and switch them."""
+        attack_result = []
         out_len = len(bb_outputs)
-        for feat_maps in bb_outputs:
+        for i in range(out_len):
+            feat_maps = bb_outputs[i]
             # feat_maps: (1, C, H, W)
-            feat_maps = feat_maps.unqueeze()
-            mean_featmap = torch.mean(feat_maps, dim=0)
-            values, indices = torch.topk(mean_featmap, 1)
+            featmap = feat_maps.squeeze()
+            attack_result.append(self.modify_featmap(featmap=featmap).unsqueeze(0))
+        
+        return attack_result
+
+    def get_topk_info(
+            self,
+            input: torch.Tensor,
+            k: int = 10,
+            largest: bool = True,
+            ):
+        flatten_tensor = input.flatten()
+        values, topk_indices = torch.topk(input=flatten_tensor, k=k, dim=0, largest=largest)
+        assert len(input.shape) == 2, \
+            f' featmap tensor must be shape (H, W)'
+        H, W = input.shape
+
+        h_indices = topk_indices // W
+        w_indices = topk_indices % W
+
+        indices = torch.stack((h_indices, w_indices), dim=1)
+
+        return values, indices
+    
+    def modify_featmap(
+            self,
+            featmap: torch.Tensor,
+            modify_percent: float = 0.2,
+            scale_factor: float = 0.5):
+        """Modify topk value in each featmap (H, W).
+        Args:
+            featmap (torch.Tensor): shape `(C, H, W)`
             mean_featmap
+            scale_factor (float): miniumize factor
+        """
+        C, H, W = featmap.shape
+        k = int(H * W * modify_percent)
+        mean_featmap = torch.mean(featmap, dim=0)
+        _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
+
+        # scale indices value in each featmap
+        featmap[:, topk_indices[:, 0], topk_indices[:, 1]] = featmap[:, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+
+        return featmap
+
 
         

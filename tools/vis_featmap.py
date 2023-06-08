@@ -19,5 +19,5 @@ if __name__ == '__main__':
 
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
     dataset = vis.dataset
-    # vis.show_stage_results(data_sample=dataset[0]['data_samples'], save=True, grey=False)
-    vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[0]['data_samples'], save=True)
+    vis.show_stage_results(data_sample=dataset[0]['data_samples'], save=True, grey=False)
+    # vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[0]['data_samples'], save=True)
