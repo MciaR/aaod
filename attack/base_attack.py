@@ -2,14 +2,11 @@ import os
 import cv2
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 
 from mmcv.transforms import Compose
-from mmdet.utils import get_test_pipeline_cfg, InstanceList
+from mmdet.utils import get_test_pipeline_cfg
 from mmdet.apis import init_detector, inference_detector
-from mmdet.models.utils import samplelist_boxtype2tensor
-from mmdet.structures import SampleList
 from mmengine.registry import MODELS
 
 
@@ -121,8 +118,8 @@ class BaseAttack():
         cv2.imwrite(ad_img_path, ad_result)
         cv2.imwrite(pertub_img_path, per_image)
         
-        assert os.path.exists(ad_img_path), \
-            f'`{ad_img_path}` does not save successfully!.'
+        assert os.path.exists(ad_img_path) and os.path.exists(pertub_img_path), \
+            f'`{ad_img_path}` or `{pertub_img_path}` does not save successfully!.'
         
         return pertub_img_path, ad_img_path
     
