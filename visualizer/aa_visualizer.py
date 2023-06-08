@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 import warnings
 import matplotlib.patches as patches
 
@@ -14,6 +15,7 @@ from mmdet.apis import init_detector, inference_detector
 from mmdet.visualization import DetLocalVisualizer
 from mmdet.structures import DetDataSample, SampleList
 from mmdet.models.utils import samplelist_boxtype2tensor
+from mmengine.registry import MODELS
 from mmengine.visualization.utils import img_from_canvas, check_type, tensor2ndarray
 
 
@@ -28,13 +30,26 @@ class AAVisualizer(DetLocalVisualizer):
         self.device = device
         self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file)
         self.dataset_meta = self.model.dataset_meta
+        self.data_preprocessor = self.get_data_preprocess()
     
     def get_model(self, cfg_file, ckpt_path):
         model = init_detector(cfg_file, ckpt_path, device=self.device)
         return model 
     
-    def get_preprocess(self):
-        """Get data preprocess pipeline"""
+    def get_data_preprocess(self):
+        """Get data preprocessor"""
+        data_preprocessor = self.model.data_preprocessor
+        if data_preprocessor is None:
+            data_preprocessor = dict(type='BaseDataPreprocessor')
+        if isinstance(data_preprocessor, nn.Module):
+            data_preprocessor = data_preprocessor
+        elif isinstance(data_preprocessor, dict):
+            data_preprocessor = MODELS.build(data_preprocessor)  
+
+        return data_preprocessor
+    
+    def get_test_pipeline(self):
+        """Get data pipeline"""
         cfg = self.model.cfg
         test_pipeline = get_test_pipeline_cfg(cfg)
         test_pipeline = Compose(test_pipeline)
@@ -59,13 +74,73 @@ class AAVisualizer(DetLocalVisualizer):
         result = inference_detector(self.model, img)
         return result
     
-    def get_multi_level_pred(self, index, data_sample, rescale: bool = True):
-        """Get multi level pred results."""
-        # extract feature
-        img_path = data_sample.img_path
-        x = self._forward(stage='neck', img=img_path)
+    def get_data_from_img(self, img):
+        """Get preprocessed data from img path
+        Args:
+            img (str): path of img.
+        Return:
+            data (dict): the data format can forward model.
+        """
+        if isinstance(img, np.ndarray):
+            # TODO: remove img_id.
+            data_ = dict(img=img, img_id=0)
+        else:
+            # TODO: remove img_id.
+            data_ = dict(img_path=img, img_id=0)
+        # build the data pipeline
+        test_pipeline = self.get_test_pipeline()
+        data_ = test_pipeline(data_)
 
-        batch_data_samples = [data_sample]
+        data_['inputs'] = [data_['inputs']]
+        data_['data_samples'] = [data_['data_samples']]
+
+
+        data = self.data_preprocessor(data_, False) 
+
+        return data
+    
+    def unify_featmap(self, index, output):
+        """Make each element of output to be same as output[index].
+        Just used for `get_multi_level_pred` for hack `fpn` output.
+        Args:
+            output (List[Tensor]): backbone or neck output.
+        Return:
+            unify_featmap (List[Tensor]): each element of output will same as output[index].
+        """
+        unify_featmap = []
+        for i in range(len(output)):
+            # unify_featmap.append(F.interpolate(
+            #     output[index],
+            #     output[i].shape[2:],
+            #     mode='bilinear',
+            #     align_corners=False)
+            # )
+            unify_featmap.append(output[index])
+        return unify_featmap
+    
+    def rescale_pred(self, data_sample, feature_output, index):
+        max_w, max_h = feature_output[0].shape[2:]
+        this_w, this_h = feature_output[index].shape[2:]
+        scale_factor = ((max_w / this_w) + (max_h / this_h)) / 2
+        data_sample.pred_instances.bboxes = data_sample.pred_instances.bboxes * scale_factor
+
+        return data_sample
+
+    
+    def get_multi_level_pred(self, index, img, rescale: bool = True):
+        """Get multi level pred results."""
+        
+        data = self.get_data_from_img(img=img)
+        data_inputs = data['inputs']
+        batch_data_samples = data['data_samples']
+
+        with torch.no_grad():
+            feature_output = self.model.backbone(data_inputs)
+            if self.model.with_neck:
+                feature_output = self.model.neck(feature_output)
+        
+        # make all output be same, so that get the output[index] featmap.
+        x = self.unify_featmap(index=index, output=feature_output)
 
         # If there are no pre-defined proposals, use RPN to get proposals
         if batch_data_samples[0].get('proposals', None) is None:
@@ -81,7 +156,10 @@ class AAVisualizer(DetLocalVisualizer):
 
         batch_data_samples = self.add_pred_to_datasample(
             batch_data_samples, results_list)
-        return batch_data_samples[0]
+        
+        data_sample = self.rescale_pred(batch_data_samples[0], feature_output, index)
+
+        return data_sample
     
     def draw_dt_gt(
             self,
@@ -149,7 +227,8 @@ class AAVisualizer(DetLocalVisualizer):
                 pred_instances = data_sample.pred_instances
                 pred_instances = pred_instances[
                     pred_instances.scores > pred_score_thr]
-                pred_img_data = self._draw_instances(image, pred_instances,
+                with torch.no_grad():
+                    pred_img_data = self._draw_instances(image, pred_instances,
                                                      classes, palette)
 
         if gt_img_data is not None and pred_img_data is not None:
@@ -176,18 +255,8 @@ class AAVisualizer(DetLocalVisualizer):
         Return:
             feats (List[Tensor]): List of model output. 
         """
-        preprocess = self.get_preprocess()
-
-        # prepare data
-        if isinstance(img, np.ndarray):
-            # TODO: remove img_id.
-            data_ = dict(img=img, img_id=0)
-        else:
-            # TODO: remove img_id.
-            data_ = dict(img_path=img, img_id=0)
-        # build the data pipeline
-        data_ = preprocess(data_)
-        input_data = data_['inputs'].float().unsqueeze(0).to(self.device)
+        data = self.get_data_from_img(img=img)
+        input_data = data['inputs']
 
         # forward the model
         with torch.no_grad():

@@ -82,7 +82,7 @@ class ExpVisualizer():
         _image = np.array(image)
         overlaid_image = _image if overlaid else None
 
-        row, col = (4, output_stages) if self.model.with_neck else (3, output_stages)
+        row, col = (5, output_stages) if self.model.with_neck else (4, output_stages)
 
         plt.figure(frameon=False, figsize=(10, 8))
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
@@ -134,34 +134,38 @@ class ExpVisualizer():
                 plt.imshow(feature_map)
                 ind += 1
 
-        # ====== Fourth row: each level pred results of neck ======   
+        # ====== Fourth row: each level pred results of neck ======            
+        for i in range(col):
+            plt.subplot(row, col, ind)
+            plt.xticks([],[])
+            plt.yticks([],[])
+            if i == 0:
+                plt.ylabel(f"Pred result")
+            pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
+            neck_pred = self.visualizer.draw_dt_gt(
+                name='pred',
+                image=_image,
+                draw_gt=False,
+                data_sample=pred_res,
+                pred_score_thr=0.3)
+            plt.title(f"Fpn {i} pred", fontsize=10)
+            plt.imshow(neck_pred)
+            ind += 1
+
+        # ====== Fiveth row: pred ======
         plt.subplot(row, col, ind)
         plt.xticks([],[])
         plt.yticks([],[])
-        plt.ylabel(f"Fpn featmap")
-        pred = self.visualizer.get_pred(img=img_path)
-        pred_res = self.visualizer.draw_dt_gt(
+        plt.ylabel(f"Pred result")
+        pred_res = self.visualizer.get_pred(img=img_path)
+        final_pred = self.visualizer.draw_dt_gt(
             name='pred',
             image=_image,
             draw_gt=False,
-            data_sample=pred,
-            pred_score_thr=0.3)      
-        plt.imshow(pred_res)          
-        # for i in range(col):
-        #     plt.subplot(row, col, ind)
-        #     plt.xticks([],[])
-        #     plt.yticks([],[])
-        #     if i == 0:
-        #         plt.ylabel(f"Pred result")
-        #     pred_res = self.visualizer.get_multi_level_pred(index=i, data_sample=data_sample)
-        #     neck_pred = self.visualizer.draw_dt_gt(
-        #         name='pred',
-        #         image=_image,
-        #         draw_gt=False,
-        #         data_sample=pred_res,
-        #         pred_score_thr=0.3)
-        #     plt.title(f"Fpn {i} pred", fontsize=10)
-        #     plt.imshow(neck_pred)
+            data_sample=pred_res,
+            pred_score_thr=0.3)
+        plt.title(f"Fpn {i} pred", fontsize=10)
+        plt.imshow(final_pred) 
 
         plt.tight_layout()
         if save:
