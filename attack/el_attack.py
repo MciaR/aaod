@@ -1,97 +1,20 @@
 import os
 import cv2
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from mmcv.transforms import Compose
-from mmdet.utils import get_test_pipeline_cfg
-from mmdet.apis import init_detector
-from mmengine.registry import MODELS
+from attack import BaseAttack
 
 
-class ELAttack():
+class ELAttack(BaseAttack):
     """Explainable Location Adversarial Attack."""
     def __init__(self,
                  cfg_file='configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py', 
                  ckpt_file='pretrained/faster_rcnn/faster_rcnn_r101_fpn_dconv_c3-c5_1x_coco_20200203-1377f13d.pth',
                  device='cuda:0') -> None:
-        self.device = device
-        self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file)
-        self.data_preprocessor = self.get_data_preprocess()
+        super().__init__(cfg_file=cfg_file, ckpt_file=ckpt_file)
 
-    def get_model(self, cfg_file, ckpt_path):
-        model = init_detector(cfg_file, ckpt_path, device=self.device)
-        return model 
-    
-    def get_test_pipeline(self):
-        """Get data preprocess pipeline"""
-        cfg = self.model.cfg
-        test_pipeline = get_test_pipeline_cfg(cfg)
-        test_pipeline = Compose(test_pipeline)
-
-        return test_pipeline
-    
-    def get_data_preprocess(self):
-        """Get data preprocessor"""
-        data_preprocessor = self.model.data_preprocessor
-        if data_preprocessor is None:
-            data_preprocessor = dict(type='BaseDataPreprocessor')
-        if isinstance(data_preprocessor, nn.Module):
-            data_preprocessor = data_preprocessor
-        elif isinstance(data_preprocessor, dict):
-            data_preprocessor = MODELS.build(data_preprocessor)  
-
-        return data_preprocessor   
-    
-    def get_data_from_img(self, img):
-        """Get preprocessed data from img path
-        Args:
-            img (str): path of img.
-        Return:
-            data (dict): the data format can forward model.
-        """
-        if isinstance(img, np.ndarray):
-            # TODO: remove img_id.
-            data_ = dict(img=img, img_id=0)
-        else:
-            # TODO: remove img_id.
-            data_ = dict(img_path=img, img_id=0)
-        # build the data pipeline
-        test_pipeline = self.get_test_pipeline()
-        data_ = test_pipeline(data_)
-
-        data_['inputs'] = [data_['inputs']]
-        data_['data_samples'] = [data_['data_samples']]
-
-
-        data = self.data_preprocessor(data_, False) 
-
-        return data
-    
-    def _forward(self, stage, img):
-        """ Get model output.
-        
-        Args:
-            stage (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
-            imgs (str): img path. 
-        Return:
-            feats (List[Tensor]): List of model output. 
-        """
-        data = self.get_data_from_img(img=img)
-        input_data = data['inputs']
-
-        # forward the model
-        with torch.no_grad():
-            if stage == 'backbone':
-                feat = self.model.backbone(input_data)
-            else:
-                feat = self.model.backbone(input_data)
-                feat = self.model.neck(feat)
-
-        return feat
-    
     def attack(self, img, attack_method='dcn_attack'):
         """Call different attack method to generate adversarial sample."""
         ad_result = None
