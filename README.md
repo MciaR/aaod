@@ -26,6 +26,15 @@ bash .tools/dist_train.sh \
 `resume-from` 既加载了模型的权重和优化器的状态，也会集成指定ckpt的地带次数，不会重新开始训练。 `load-from`则是只加载魔性的权重，它的训练时从头开始的，经常被用于微调模型。
 
 ## Test
+单机单卡推理
+```bash
+python tools/test.py \
+    ${CONFIG_FILE} \
+    ${CHECKPOINT_FILE} \
+    [optional arguments]
+```
+
+单机多卡推理
 ```bash
 bash tools/dist_test.sh \
 configs/faster_rcnn_r101_fpn_coco.py \
