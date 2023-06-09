@@ -1,6 +1,6 @@
 data
 .vscode
-*work_dir
+*work_dir*
 __pycache__
 test
 pretrained
