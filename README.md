@@ -27,10 +27,11 @@ bash .tools/dist_train.sh \
 
 ## Test
 ```bash
-python tools/test.py \
+bash tools/dist_test.sh \
 configs/faster_rcnn_r101_fpn_coco.py \
 pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth \
---work-dir .work_dir \
+2 \
+--work-dir test_results \
 --out attack_03_03.pkl
 ```
 

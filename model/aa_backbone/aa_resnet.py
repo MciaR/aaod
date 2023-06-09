@@ -55,10 +55,9 @@ class AAResNet(ResNet):
         attack_result = []
         out_len = len(bb_outputs)
         for i in range(out_len):
-            feat_maps = bb_outputs[i]
-            # feat_maps: (1, C, H, W)
-            featmap = feat_maps.squeeze()
-            attack_result.append(self.modify_featmap(featmap=featmap).unsqueeze(0))
+            featmap = bb_outputs[i]
+            # feat_maps: (N, C, H, W)
+            attack_result.append(self.modify_featmap(featmap=featmap))
         
         return attack_result
 
@@ -88,17 +87,19 @@ class AAResNet(ResNet):
             scale_factor: float = 0.3):
         """Modify topk value in each featmap (H, W).
         Args:
-            featmap (torch.Tensor): shape `(C, H, W)`
+            featmap (torch.Tensor): shape `(N, C, H, W)`
             mean_featmap
             scale_factor (float): miniumize factor
         """
-        C, H, W = featmap.shape
-        k = int(H * W * modify_percent)
-        mean_featmap = torch.mean(featmap, dim=0)
-        _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
+        N, C, H, W = featmap.shape
+        for sample_ind in range(N):
+            sample_featmap = featmap[sample_ind]
+            k = int(H * W * modify_percent)
+            mean_featmap = torch.mean(sample_featmap, dim=0)
+            _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
 
-        # scale indices value in each featmap
-        featmap[:, topk_indices[:, 0], topk_indices[:, 1]] = featmap[:, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+            # scale indices value in each featmap
+            featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
 
         return featmap
 

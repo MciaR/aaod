@@ -19,11 +19,11 @@ class ExpVisualizer():
         self.runner = self.visualizer
         self.model = self.visualizer.model
         self.dataset = self.visualizer.get_dataset()
-        if attack_method == 'dcf':
-            attacker = DCFAttack()
         if self.use_attack:
             assert attack_method is not None, \
                 f'when `user_attack` is True, `attack_method` must be set.'
+            if attack_method == 'dcf':
+                attacker = DCFAttack()
             setattr(self, 'attacker', attacker)  
     
     @staticmethod
