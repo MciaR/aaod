@@ -55,6 +55,7 @@ class ExpVisualizer():
             save=False,
             grey=False,
             overlaid=False,
+            show_thr=0.3,
     ):
         """Show `ori_img`, `squeeze_mean_channel(backbone)`, `squeeze_mean_channel(neck)`, `final results of each level of extract_feature`.
         Args:
@@ -64,6 +65,7 @@ class ExpVisualizer():
             stage (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
             grey (bool): `True` means return greymap, else return heatmap.
             attack (bool): `True` means using attack method.
+            show_thr (float): pred result threshold to show.
 
         """
         assert img is not None or data_sample is not None, \
@@ -151,7 +153,7 @@ class ExpVisualizer():
                 image=_image,
                 draw_gt=False,
                 data_sample=pred_res,
-                pred_score_thr=0.3)
+                pred_score_thr=show_thr)
             plt.title(f"Fpn {i} pred", fontsize=10)
             plt.imshow(neck_pred)
             ind += 1
@@ -167,7 +169,7 @@ class ExpVisualizer():
             image=_image,
             draw_gt=False,
             data_sample=pred_res,
-            pred_score_thr=0.3)
+            pred_score_thr=show_thr)
         plt.imshow(final_pred) 
 
         plt.tight_layout()
@@ -181,13 +183,15 @@ class ExpVisualizer():
             model_name,
             img=None,
             data_sample=None,
-            save=False):
+            save=False,
+            show_thr=0.3):
         """Show `ori_img`, `noise`, `adv_samples`, `attack_results`.
         Args:
             img (str): path of img.
             model_name (str): name of infer model.
             data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
             save (bool): whether save pic. if it is True, pic will not be shown when running.
+            show_thr (float): pred result threshold to show.
         """
         assert self.use_attack, \
             f'`use_attack` must be `True` when calling function `show_attack_results.`'
@@ -220,7 +224,7 @@ class ExpVisualizer():
             image=_ad_image,
             draw_gt=False,
             data_sample=ad_result,
-            pred_score_thr=0.3)
+            pred_score_thr=show_thr)
         
         image_list = [_image, _pertub_img, _ad_image, ad_pred]
         image_name = ['Ori image', 'Pertub noise ', 'Adversarial sample', 'Attack result']
