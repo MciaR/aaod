@@ -7,3 +7,4 @@ pretrained
 records
 *.pth
 test_results
+*.pkl
