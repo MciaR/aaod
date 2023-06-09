@@ -19,15 +19,16 @@ model = dict(
         type='mmpretrain.VGG',
         depth=16,
         out_indices=(4, ), # only output the 4th stage.
+        with_last_pool=False, # downsample 16x ,otherwise 32x.
         init_cfg=dict(type='Pretrained', checkpoint=pretrained, prefix='backbone.')),
     neck=None,
     rpn_head=dict(
         type='RPNHead',
         in_channels=512,
-        feat_channels=256,
+        feat_channels=512,
         anchor_generator=dict(
             type='AnchorGenerator',
-            scales=[8],
+            scales=[16], # means backbone downsample 16x
             ratios=[0.5, 1.0, 2.0],
             strides=[16]),
         bbox_coder=dict(
@@ -42,7 +43,7 @@ model = dict(
         bbox_roi_extractor=dict(
             type='SingleRoIExtractor',
             roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
-            out_channels=256,
+            out_channels=512,
             featmap_strides=[16]),
         bbox_head=dict(
             type='Shared2FCBBoxHead',

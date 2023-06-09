@@ -4,9 +4,9 @@ import pandas as pd
 dataset_type = ['train', 'val']
 
 def create_tiny_dataset(dataset_type, percentage: float = 0.1):  
-    annotations_file = 'data/coco2014/annotations/instances_' + dataset_type + '2014.json'
-    images_path = 'data/coco2014/images/' + dataset_type + '2014'
-    save_dir = 'data/coco2014/annotations/tiny_' + dataset_type + '2014.json'
+    annotations_file = 'data/coco2017/annotations/instances_' + dataset_type + '2017.json'
+    images_path = 'data/coco2017/images/' + dataset_type + '2017'
+    save_dir = 'data/coco2017/annotations/tiny_' + dataset_type + '2017.json'
 
     with open(annotations_file, "r") as f:
         anno = json.load(f)
