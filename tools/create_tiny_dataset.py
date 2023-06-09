@@ -18,13 +18,15 @@ def create_tiny_dataset(dataset_type, percentage: float = 0.1):
     new_images_id = new_images["id"]
     new_annos = pd_annos[pd_annos.image_id.isin(new_images_id)]
 
-    new_images_json = new_images.to_json(orient='records')
-    new_annos_json = new_annos.to_json(orient='records')
-    anno["images"] = new_images_json
-    anno["annotations"] = new_annos_json
+    new_images_json = new_images.to_json(orient='records', force_ascii=False)  # to_json将DataFrame转换成了json格式的str
+    new_annos_json = new_annos.to_json(orient='records', force_ascii=False)  # loads将str转换为JSON对象
+    anno["images"] = json.loads(new_images_json)
+    anno["annotations"] = json.loads(new_annos_json)
+
+    anno_json = json.dumps(anno, ensure_ascii=False)  # dumps将JSON对象转换为文件写入支持的类型str
 
     with open(save_dir, "w") as f:
-        json.dump(anno, f)
+        f.write(anno_json)
     print(f'Create tiny {dataset_type} dataset successfully!')
 
 create_tiny_dataset(dataset_type=dataset_type[0])
