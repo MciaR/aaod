@@ -84,8 +84,8 @@ class AAResNet(ResNet):
     def modify_featmap(
             self,
             featmap: torch.Tensor,
-            modify_percent: float = 0.2,
-            scale_factor: float = 0.5):
+            modify_percent: float = 0.3,
+            scale_factor: float = 0.3):
         """Modify topk value in each featmap (H, W).
         Args:
             featmap (torch.Tensor): shape `(C, H, W)`

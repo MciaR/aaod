@@ -25,6 +25,15 @@ bash .tools/dist_train.sh \
 **注意：** `resume-from` 和 `load-from`的区别：
 `resume-from` 既加载了模型的权重和优化器的状态，也会集成指定ckpt的地带次数，不会重新开始训练。 `load-from`则是只加载魔性的权重，它的训练时从头开始的，经常被用于微调模型。
 
+## Test
+```bash
+python tools/test.py \
+configs/faster_rcnn_r101_fpn_coco.py \
+pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth \
+--work-dir .work_dir \
+--out attack_03_03.pkl
+```
+
 # Citation
 以上说明来自于MMDetection官方说明文档。<br/>
 本代码库基于OpenMMLab的MMDetection编写，仅用于学术、学习用途。感谢OpenMMLab开发的深度学习框架。
