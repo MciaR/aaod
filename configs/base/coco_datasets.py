@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'CocoDataset'
-data_root = 'data/coco2014/'
+data_root = 'data/coco2017/'
 
 # Example to use different file client
 # Method 1: simply set the data root and let the file I/O module
@@ -43,8 +43,8 @@ train_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='annotations/instances_train2014.json',
-        data_prefix=dict(img='images/train2014/'),
+        ann_file='annotations/instances_train2017.json',
+        data_prefix=dict(img='images/train2017/'),
         filter_cfg=dict(filter_empty_gt=True, min_size=32),
         pipeline=train_pipeline,
         backend_args=backend_args))
@@ -57,8 +57,8 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='annotations/instances_val2014.json',
-        data_prefix=dict(img='images/val2014/'),
+        ann_file='annotations/instances_val2017.json',
+        data_prefix=dict(img='images/val2017/'),
         test_mode=True,
         pipeline=test_pipeline,
         backend_args=backend_args))
