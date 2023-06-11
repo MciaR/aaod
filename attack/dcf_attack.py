@@ -12,22 +12,24 @@ class DCFAttack(BaseAttack):
     def __init__(self,
                  cfg_file='configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py', 
                  ckpt_file='pretrained/faster_rcnn/faster_rcnn_r101_fpn_dconv_c3-c5_1x_coco_20200203-1377f13d.pth',
-                 device='cuda:0') -> None:
-        super().__init__(cfg_file=cfg_file, ckpt_file=ckpt_file)
+                 device='cuda:0',
+                 out_ind=[3, 4],
+                 alpha=0.35) -> None:
+        super().__init__(cfg_file=cfg_file, ckpt_file=ckpt_file, device=device, attack_params=dict(out_ind=out_ind, alpha=alpha))
 
-    def _attack(self, img, out_ind=[3, 4], alpha=0.35):
+    def generate_adv_samples(self, x, out_ind, alpha):
         """Simply use dcn output as noise to add to ori img to generate adversarial sample.
         
         Args:
-            img (torch.Tensor | np.Numpy): ori image.
+            x (str): clean image path.
             out_ind (int): index of out_indices of backbone, coressponding to `out_indices` in config file.
             alpha (float): attack power factor.
 
         Return:
             ad_result (torch.Tensor | np.Numpy): adversarial sample.
         """
-        result = self._forward(stage="neck",img = img)
-        image = cv2.imread(img)
+        result = self._forward(stage="neck",img = x)
+        image = cv2.imread(x)
         perturbed_image = np.zeros(image.shape)
         per_factor = [0.4, 0.6]
 

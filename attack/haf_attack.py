@@ -1,55 +1,22 @@
+import os
+import cv2
 import torch
+import torch.nn.functional as F
+import numpy as np
 
-from mmdet.registry import MODELS
-from mmdet.models.backbones import ResNet
+from attack import BaseAttack
 
 
-@MODELS.register_module()
-class AAResNet(ResNet):
-    """ResNet backbone for adversarial attack ."""
-    def __init__(self,
-                depth,
-                in_channels=3,
-                stem_channels=None,
-                base_channels=64,
-                num_stages=4,
-                strides=(1, 2, 2, 2),
-                dilations=(1, 1, 1, 1),
-                out_indices=(0, 1, 2, 3),
-                style='pytorch',
-                deep_stem=False,
-                avg_down=False,
-                frozen_stages=-1,
-                conv_cfg=None,
-                norm_cfg=dict(type='BN', requires_grad=True),
-                norm_eval=True,
-                dcn=None,
-                stage_with_dcn=(False, False, False, False),
-                plugins=None,
-                with_cp=False,
-                zero_init_residual=True,
-                pretrained=None,
-                init_cfg=None):
-        super(AAResNet, self).__init__(depth, in_channels, stem_channels, base_channels, num_stages, strides, dilations, out_indices, style, deep_stem, avg_down, frozen_stages, conv_cfg, norm_cfg, norm_eval, dcn, stage_with_dcn, plugins, with_cp, zero_init_residual, pretrained, init_cfg)
+class HAFAttack(BaseAttack):
+    """High Activation Featuremap Attack."""
+    def __init__(self, 
+                 cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
+                 ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
+                 p: int = 2,
+                 eplison: float = 0.5, 
+                 device='cuda:0') -> None:
+        super().__init__(cfg_file, ckpt_file, device, attack_params=dict(p=p, eplison=eplison))
 
-    def forward(self, x):
-        """Forward function."""
-        if self.deep_stem:
-            x = self.stem(x)
-        else:
-            x = self.conv1(x)
-            x = self.norm1(x)
-            x = self.relu(x)
-        x = self.maxpool(x)
-        outs = []
-        for i, layer_name in enumerate(self.res_layers):
-            res_layer = getattr(self, layer_name)
-            x = res_layer(x)
-            if i in self.out_indices:
-                outs.append(x)
-        # outs = self.attack_method(outs)
-        return tuple(outs)
-    
     def attack_method(self, bb_outputs, topk = 1):
         """ Find mean featmap max and min activate value pixel, and switch them."""
         attack_result = []
@@ -114,15 +81,14 @@ class AAResNet(ResNet):
         """
         pass
 
-    def generate_adv_samples(self, x, eplison):
+    def generate_adv_samples(self, x, eplison, p):
         """Attack method to generate adversarial image.
         Args:
-            x (np.ndarray | torch.Tensor): clean image.
+            x (str): clean image path.
             eplison (float): niose strength.    
+            p (int): default `2`, p-norm to calculate distance between clean and adv image.
         Return:
+            noise (np.ndarray | torch.Tensor): niose which add to clean image.
             adv (np.ndarray | torch.Tensor): adversarial image.
         """
         pass
-
-
-        

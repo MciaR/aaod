@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from attack import DCFAttack
+from attack import DCFAttack, HAFAttack
 from visualizer import AAVisualizer
 from PIL import Image
 
@@ -24,6 +24,8 @@ class ExpVisualizer():
                 f'when `user_attack` is True, `attack_method` must be set.'
             if attack_method == 'dcf':
                 attacker = DCFAttack()
+            elif attack_method == 'haf':
+                attacker = HAFAttack()
             setattr(self, 'attacker', attacker)  
     
     @staticmethod
@@ -210,9 +212,15 @@ class ExpVisualizer():
         # ====== ori_image & noise & adv_image & pred results =======
         image = Image.open(img_path)
         _image = np.array(image)
+        clean_pred = self.visualizer.get_pred(img_path)
+        _clean_image = self.visualizer.draw_dt_gt(
+            name='attack',
+            image=_image,
+            draw_gt=False,
+            data_sample=clean_pred,
+            pred_score_thr=show_thr)
 
-        pertub_img_path, ad_image_path = self.attacker.attack(img_path)
-        ad_result = self.visualizer.get_pred(ad_image_path)
+        ad_result, pertub_img_path, ad_image_path = self.attacker.attack(img_path, save=True)
 
         ad_image = Image.open(ad_image_path)
         _ad_image = np.array(ad_image)
@@ -226,7 +234,7 @@ class ExpVisualizer():
             data_sample=ad_result,
             pred_score_thr=show_thr)
         
-        image_list = [_image, _pertub_img, _ad_image, ad_pred]
+        image_list = [_clean_image, _pertub_img, _ad_image, ad_pred]
         image_name = ['Ori image', 'Pertub noise ', 'Adversarial sample', 'Attack result']
         for i in range(col):
             plt.subplot(row, col, i + 1)

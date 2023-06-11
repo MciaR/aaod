@@ -15,11 +15,13 @@ class BaseAttack():
     def __init__(self,
                  cfg_file, 
                  ckpt_file,
-                 device='cuda:0') -> None:
+                 attack_params,
+                 device='cuda:0',) -> None:
         self.device = device
         self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file)
         self.data_preprocessor = self.get_data_preprocess()
         self.test_pipeline = self.get_test_pipeline()
+        self.attack_params = dict(**attack_params)
 
     def get_model(self, cfg_file, ckpt_path):
         model = init_detector(cfg_file, ckpt_path, device=self.device)
@@ -45,16 +47,39 @@ class BaseAttack():
 
         return data_preprocessor   
     
-    def get_pred(self, img: str):
+    def attack(self, img, save=False):
         """Get inference results of model.
-        
         Args:
-            img (str | np.ndarray): img info.
+            img (str): img path.
+            save (bool): whether save noise and adv.
         Return:
             result (torch.Tensor | np.ndarray): result of inference.
+            pertub_path (str): if `save=True`, it will return path of pertub noise.
+            adv_path (str):  if `save=True` it will return path of adversarial sample.
         """
-        result = inference_detector(self.model, img)
-        return result
+        # get adversarial samples, kwargs must be implemented.
+        pertub, adv = self.generate_adv_samples(x=img, **self.attack_params)
+        # forward detector to get pred results.
+        result = self.get_pred(img=adv)
+
+        if save:
+            attack_name = os.path.basename(__file__).split('.')[0]
+            save_dir = 'ad_result/' + attack_name
+            img_name = img.split('/')[-1]
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            ad_img_path = os.path.join(save_dir, img_name)
+            pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name) 
+
+            cv2.imwrite(ad_img_path, adv)
+            cv2.imwrite(pertub_img_path, pertub)
+            
+            assert os.path.exists(ad_img_path) and os.path.exists(pertub_img_path), \
+                f'`{ad_img_path}` or `{pertub_img_path}` does not save successfully!.'
+            
+            return result, pertub_img_path, ad_img_path
+        else:
+            return result
     
     def get_data_from_img(self, img):
         """Get preprocessed data from img path
@@ -103,25 +128,23 @@ class BaseAttack():
 
         return feat
     
-    def attack(self, img):
-        """Call attack method to generate adversarial sample."""
-        ad_result = None
-        attack_name = os.path.basename(__file__).split('.')[0]
-        save_dir = 'ad_result/' + attack_name
-        img_name = img.split('/')[-1]
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        ad_img_path = os.path.join(save_dir, img_name)
-        pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name)
-
-        per_image, ad_result = self._attack(img=img)
-        cv2.imwrite(ad_img_path, ad_result)
-        cv2.imwrite(pertub_img_path, per_image)
-        
-        assert os.path.exists(ad_img_path) and os.path.exists(pertub_img_path), \
-            f'`{ad_img_path}` or `{pertub_img_path}` does not save successfully!.'
-        
-        return pertub_img_path, ad_img_path
+    def get_pred(self, img):
+        """Get pred result of img
+        Args:
+            img (str): path of img.
+        Returns:
+            result (DetDataSample): result of pred.
+        """
+        result = inference_detector(self.model, img)
+        return result
     
-    def _attack(self, img):
+    def generate_adv_samples(self, x, **kwargs):
+        """Attack method to generate adversarial image.
+        Args:
+            x (str): clean image's path.
+            kwargs: other key-value args.    
+        Return:
+            noise (np.ndarray | torch.Tensor): niose which add to clean image.
+            adv (np.ndarray | torch.Tensor): adversarial image.
+        """
         pass
