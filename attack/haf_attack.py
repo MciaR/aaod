@@ -92,7 +92,9 @@ class HAFAttack(BaseAttack):
         # initialize r
         img = Image.open(x)
         clean_img = np.array(img)
-        r = torch.rand(clean_img.shape, requires_grad=True, device=self.device)
+        r = torch.rand(clean_img.shape) * 10
+        r = r.cuda()
+        r.requires_grad = True
 
         # params
         step = 0
