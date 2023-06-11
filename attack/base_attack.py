@@ -27,10 +27,12 @@ class BaseAttack():
         model = init_detector(cfg_file, ckpt_path, device=self.device)
         return model 
     
-    def get_test_pipeline(self):
+    def get_test_pipeline(self, load_from_ndarray: bool = False):
         """Get data preprocess pipeline"""
         cfg = self.model.cfg
         test_pipeline = get_test_pipeline_cfg(cfg)
+        if load_from_ndarray:
+            test_pipeline[0].type = 'mmdet.LoadImageFromNDArray'
         test_pipeline = Compose(test_pipeline)
 
         return test_pipeline
@@ -88,19 +90,20 @@ class BaseAttack():
         Return:
             data (dict): the data format can forward model.
         """
+        load_from_ndarray = False
         if isinstance(img, np.ndarray):
             # TODO: remove img_id.
             data_ = dict(img=img, img_id=0)
+            load_from_ndarray = True
         else:
             # TODO: remove img_id.
             data_ = dict(img_path=img, img_id=0)
         # build the data pipeline
-        test_pipeline = self.get_test_pipeline()
+        test_pipeline = self.get_test_pipeline(load_from_ndarray=load_from_ndarray)
         data_ = test_pipeline(data_)
 
         data_['inputs'] = [data_['inputs']]
         data_['data_samples'] = [data_['data_samples']]
-
 
         data = self.data_preprocessor(data_, False) 
 

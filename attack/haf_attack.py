@@ -5,28 +5,19 @@ import torch.nn.functional as F
 import numpy as np
 
 from attack import BaseAttack
-
+from PIL import Image
 
 class HAFAttack(BaseAttack):
     """High Activation Featuremap Attack."""
     def __init__(self, 
                  cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
                  ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
-                 p: int = 2,
-                 eplison: float = 0.5, 
+                 stage: int = 0, # attack stage of backbone. `(0, 1, 2, 3)` for resnet.
+                 p: int = 2, # attack param
+                 eplison: float = 0.5,  # attack param
+                 M: int = 1000, # attack param, max step of generating perbutaion.
                  device='cuda:0') -> None:
-        super().__init__(cfg_file, ckpt_file, device, attack_params=dict(p=p, eplison=eplison))
-
-    def attack_method(self, bb_outputs, topk = 1):
-        """ Find mean featmap max and min activate value pixel, and switch them."""
-        attack_result = []
-        out_len = len(bb_outputs)
-        for i in range(out_len):
-            featmap = bb_outputs[i]
-            # feat_maps: (N, C, H, W)
-            attack_result.append(self.modify_featmap(featmap=featmap))
-        
-        return attack_result
+        super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, eplison=eplison, stage=stage, M=M))
 
     def get_topk_info(
             self,
@@ -81,7 +72,7 @@ class HAFAttack(BaseAttack):
         """
         pass
 
-    def generate_adv_samples(self, x, eplison, p):
+    def generate_adv_samples(self, x, stage, eplison, p, M):
         """Attack method to generate adversarial image.
         Args:
             x (str): clean image path.
@@ -91,4 +82,43 @@ class HAFAttack(BaseAttack):
             noise (np.ndarray | torch.Tensor): niose which add to clean image.
             adv (np.ndarray | torch.Tensor): adversarial image.
         """
-        pass
+        # get feature map of clean img.
+        bb_outs = self._forward(img=x, stage='backbone')
+        # target featmap
+        target_fm = bb_outs[stage]
+        # featmap that the attack should be generated
+        attack_gt_featmap = self.modify_featmap(target_fm)
+
+        # initialize r
+        img = Image.open(x)
+        clean_img = np.array(img)
+        r = torch.rand(clean_img.shape, requires_grad=True, device=self.device)
+
+        # params
+        step = 0
+        optimizer = torch.optim.SGD([r], lr=0.01, momentum=0.9)
+        loss_fn = torch.nn.MSELoss()
+        
+        while step < M:
+            # calculate output featmap
+            pertub_image = clean_img + r.detach().cpu().numpy()
+            pertub_bb_output = self._forward(img=pertub_image, stage='backbone')
+            pertub_featmap = pertub_bb_output[stage]
+
+            loss = loss_fn(pertub_featmap, attack_gt_featmap)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            step += 1
+
+            if step % 10 == 0:
+                print("Train step [{}/{}], loss: {}.".format(step, M, loss))
+
+        print("Generate adv compeleted!")
+
+        pertub = r.detach().cpu().numpy()
+        adv_image = clean_img + pertub
+
+        return pertub, adv_image
