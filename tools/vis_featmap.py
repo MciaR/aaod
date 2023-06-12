@@ -21,3 +21,4 @@ if __name__ == '__main__':
     dataset = vis.dataset
     # vis.show_stage_results(data_sample=dataset[0]['data_samples'], save=True, grey=True, show_thr=0.1)
     vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[0]['data_samples'], save=True)
+    # vis.show_stage_results(img='ad_result/base_attack/000000397133.jpg', save=False, grey=True, show_thr=0.1)

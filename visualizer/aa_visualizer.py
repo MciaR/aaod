@@ -210,11 +210,11 @@ class AAVisualizer(DetLocalVisualizer):
 
         if data_sample is not None:
             data_sample = data_sample.cpu()
-        
-        # change type of bboxes to Tensor or Numpy
-        data_sample.gt_instances.bboxes = data_sample.gt_instances.bboxes.numpy()
 
         if draw_gt and data_sample is not None:
+            # change type of bboxes to Tensor or Numpy
+            data_sample.gt_instances.bboxes = data_sample.gt_instances.bboxes.numpy()
+            
             gt_img_data = image
             if 'gt_instances' in data_sample:
                 gt_img_data = self._draw_instances(image,
