@@ -13,10 +13,10 @@ class HAFAttack(BaseAttack):
     def __init__(self, 
                  cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
                  ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
-                 stage: int = 3, # attack stage of backbone. `(0, 1, 2, 3)` for resnet.
+                 stage: list = [0, 1], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好
                  p: int = 2, # attack param
-                 eplison: float = 0.01,  # attack param
-                 M: int = 10000, # attack param, max step of generating perbutaion.
+                 eplison: float = 0.1,  # attack param
+                 M: int = 1000, # attack param, max step of generating perbutaion.
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, eplison=eplison, stage=stage, M=M))
 
@@ -93,6 +93,63 @@ class HAFAttack(BaseAttack):
         
         return ori_pic
 
+    # def generate_adv_samples(self, x, stage, eplison, p, M):
+    #     """Attack method to generate adversarial image.
+    #     Args:
+    #         x (str): clean image path.
+    #         eplison (float): niose strength.    
+    #         p (int): default `2`, p-norm to calculate distance between clean and adv image.
+    #     Return:
+    #         noise (np.ndarray | torch.Tensor): niose which add to clean image.
+    #         adv (np.ndarray | torch.Tensor): adversarial image.
+    #     """
+    #     # get feature map of clean img.
+    #     bb_outs = self._forward(img=x, stage='backbone')
+    #     # target featmap
+    #     target_fm = bb_outs[stage]
+    #     # featmap that the attack should be generated
+    #     attack_gt_featmap = self.modify_featmap(target_fm)
+
+    #     # initialize r
+    #     data = self.get_data_from_img(img=x)
+    #     clean_image = data['inputs']
+    #     r = torch.randn(clean_image.shape, requires_grad=True, device=self.device)
+    #     r = r.detach()
+    #     r.requires_grad = True
+    #     gt_r = torch.zeros_like(r)
+        
+    #     # params
+    #     step = 0
+    #     optimizer = torch.optim.Adam(params=[r], lr=0.01)
+    #     loss_pertub = torch.nn.MSELoss()
+    #     loss_distance = torch.nn.MSELoss()
+    #     alpha = 0.1
+        
+    #     while step < M:
+    #         # calculate output featmap
+    #         pertub_bb_output = self.model.backbone(clean_image + r)
+    #         pertub_featmap = pertub_bb_output[stage]
+
+    #         l1 = loss_pertub(pertub_featmap, attack_gt_featmap) 
+    #         l2 = loss_distance(r, gt_r)
+    #         loss = l1 + alpha * l2
+
+    #         optimizer.zero_grad()
+    #         loss.backward()
+    #         optimizer.step()
+
+    #         step += 1
+
+    #         if step % 10 == 0:
+    #             print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
+
+    #     print("Generate adv compeleted!")
+
+    #     pertub = self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0])
+    #     adv_image = self.reverse_augment(x=clean_image.squeeze(), datasample=data['data_samples'][0]) + pertub
+
+    #     return pertub, adv_image
+
     def generate_adv_samples(self, x, stage, eplison, p, M):
         """Attack method to generate adversarial image.
         Args:
@@ -106,46 +163,47 @@ class HAFAttack(BaseAttack):
         # get feature map of clean img.
         bb_outs = self._forward(img=x, stage='backbone')
         # target featmap
-        target_fm = bb_outs[stage]
+        target_fm = [bb_outs[i] for i in stage]
         # featmap that the attack should be generated
-        attack_gt_featmap = self.modify_featmap(target_fm)
+        attack_gt_featmap = [self.modify_featmap(fm) for fm in target_fm]
 
         # initialize r
         data = self.get_data_from_img(img=x)
         clean_image = data['inputs']
         r = torch.randn(clean_image.shape, requires_grad=True, device=self.device)
-        r = r.detach()
-        r.requires_grad = True
-        norm_thr = torch.norm(clean_image * eplison, p=2)
         
         # params
         step = 0
         optimizer = torch.optim.Adam(params=[r], lr=0.01)
-        loss_fn = torch.nn.MSELoss()
+        loss_pertub = torch.nn.MSELoss()
+        loss_distance = torch.nn.MSELoss()
+        # direct_loss = torch.nn.
+        alpha = 0.25
         
+
         while step < M:
             # calculate output featmap
-            pertub_bb_output = self.model.backbone(clean_image + r)
-            pertub_featmap = pertub_bb_output[stage]
+            pertub_bb_output = self.model.backbone(r)
+            pertub_featmap = [pertub_bb_output[i] for i in stage]
 
-            loss = loss_fn(pertub_featmap, attack_gt_featmap)
+            l1 = 0
+            for p_fm, gt_fm in zip(pertub_featmap, attack_gt_featmap):
+                l1 += (1 / len(stage) * loss_pertub(p_fm, gt_fm)) 
+            l2 = loss_distance(r, clean_image)
+            loss = l1 + alpha * l2
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             step += 1
-            r_norm = torch.norm(r, p=2) 
-
-            if r_norm < norm_thr and loss < 0.01:
-                break
 
             if step % 10 == 0:
-                print("Train step [{}/{}], loss: {}, r_norm: [{}/{}].".format(step, M, loss, r_norm, norm_thr))
+                print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
 
         print("Generate adv compeleted!")
 
-        pertub = self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0])
-        adv_image = self.reverse_augment(x=clean_image.squeeze(), datasample=data['data_samples'][0]) + pertub * 0.01
+        pertub = self.reverse_augment(x=(r.squeeze() - clean_image.squeeze()), datasample=data['data_samples'][0])
+        adv_image = self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0])
 
         return pertub, adv_image

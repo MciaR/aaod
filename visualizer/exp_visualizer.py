@@ -205,13 +205,22 @@ class ExpVisualizer():
         else:
             img_path = data_sample.img_path
     
-        row, col = (1, 4)
-        plt.figure(frameon=False, figsize=(10, 8))
+        row, col = (1, 5)
+        plt.figure(frameon=False, figsize=(12, 8), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         # ====== ori_image & noise & adv_image & pred results =======
         image = Image.open(img_path)
         _image = np.array(image)
+
+        _gt_image = self.visualizer.draw_dt_gt(
+            name='attack',
+            image=_image,
+            draw_gt=True,
+            draw_pred=False,
+            data_sample=data_sample,
+            pred_score_thr=show_thr)
+        
         clean_pred = self.visualizer.get_pred(img_path)
         _clean_image = self.visualizer.draw_dt_gt(
             name='attack',
@@ -234,8 +243,8 @@ class ExpVisualizer():
             data_sample=ad_result,
             pred_score_thr=show_thr)
         
-        image_list = [_clean_image, _pertub_img, _ad_image, ad_pred]
-        image_name = ['Ori image', 'Pertub noise ', 'Adversarial sample', 'Attack result']
+        image_list = [_gt_image, _clean_image, _pertub_img, _ad_image, ad_pred]
+        image_name = ['gt', 'Ori image', 'Pertub noise ', 'Adversarial sample', 'Attack result']
         for i in range(col):
             plt.subplot(row, col, i + 1)
             plt.xticks([],[])
@@ -250,3 +259,5 @@ class ExpVisualizer():
             img_name = img_path.split('/')[-1].split('.')[0]
             plt.savefig('records/pics/attack/{}_{}_{}.png'.format('attack', self.get_timestamp(), img_name))
         plt.show()
+
+        self.show_stage_results(img = f'ad_result/base_attack/{img_path.split("/")[-1]}', save=True, grey=True)
