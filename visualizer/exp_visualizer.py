@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from attack import DCFAttack, HAFAttack
+from attack import BaseAttack
 from visualizer import AAVisualizer
 from PIL import Image
 
@@ -13,19 +13,15 @@ class ExpVisualizer():
         use_attack (bool): if it is `True`, then will initialize attacker.
         attack_method (str): `['dcf',]`.
     """
-    def __init__(self, cfg_file, ckpt_file, use_attack=False, attack_method=None):
+    def __init__(self, cfg_file, ckpt_file, use_attack=False, attacker=None):
         self.use_attack = use_attack 
         self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
         self.runner = self.visualizer
         self.model = self.visualizer.model
         self.dataset = self.visualizer.get_dataset()
         if self.use_attack:
-            assert attack_method is not None, \
-                f'when `user_attack` is True, `attack_method` must be set.'
-            if attack_method == 'dcf':
-                attacker = DCFAttack()
-            elif attack_method == 'haf':
-                attacker = HAFAttack()
+            assert attacker is not None and isinstance(attacker, BaseAttack), \
+                f'when `user_attack` is True, `attacker` must be set.'
             setattr(self, 'attacker', attacker)  
     
     @staticmethod

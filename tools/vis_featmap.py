@@ -1,5 +1,5 @@
 from visualizer import ExpVisualizer
-
+from attack import HAFAttack
 
 def parse_args():
     pass
@@ -12,10 +12,11 @@ if __name__ == '__main__':
     # config_file = 'configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py'
     # checkpoint_file = 'pretrained/faster_rcnn/faster_rcnn_r101_fpn_dconv_c3-c5_1x_coco_20200203-1377f13d.pth'
 
+    attacker = HAFAttack(cfg_file='configs/fr_vgg16_coco.py', ckpt_file='', stage=[0])
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attack_method='haf')
-    show_layer = 3 # (256, 512, 1024, 2048) channels
-    top_k = 100
-    pic_overlay = False
+    # show_layer = 3 # (256, 512, 1024, 2048) channels
+    # top_k = 100
+    # pic_overlay = False
 
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
     dataset = vis.dataset

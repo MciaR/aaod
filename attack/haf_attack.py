@@ -199,7 +199,7 @@ class HAFAttack(BaseAttack):
             step += 1
 
             # if step % 10 == 0:
-                # print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
+            #     print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
 
         # print("Generate adv compeleted!")
 
