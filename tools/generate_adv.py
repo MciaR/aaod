@@ -11,8 +11,8 @@ def generate_and_save(img_list, device):
     haf_attack = HAFAttack(cfg_file='configs/fr_vgg16_coco.py', ckpt_file='test_model/fr_vgg16_coco_0184.pth', device=device)
 
     image_root = 'data/coco2017/images/val2017'
-    adv_save_dir = 'data/coco2017/adv/fr_vgg16'
-    pertub_save_dir = 'data/coco2017/pertub/fr_vgg16'
+    adv_save_dir = 'data/coco2017/adv/fr_vgg16_tiny'
+    pertub_save_dir = 'data/coco2017/pertub/fr_vgg16_tiny'
 
     if not os.path.exists(adv_save_dir):
         os.makedirs(adv_save_dir)

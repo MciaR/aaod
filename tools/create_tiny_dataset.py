@@ -1,5 +1,7 @@
 import json
+import os
 import pandas as pd
+import shutil
 
 dataset_type = ['train', 'val']
 
@@ -7,6 +9,7 @@ def create_tiny_dataset(dataset_type, percentage: float = 0.1):
     annotations_file = 'data/coco2017/annotations/instances_' + dataset_type + '2017.json'
     images_path = 'data/coco2017/images/' + dataset_type + '2017'
     save_dir = 'data/coco2017/annotations/tiny_' + dataset_type + '2017.json'
+    target_path = 'data/tiny_coco2017/images/' + dataset_type + '2017'
 
     with open(annotations_file, "r") as f:
         anno = json.load(f)
@@ -27,6 +30,14 @@ def create_tiny_dataset(dataset_type, percentage: float = 0.1):
 
     with open(save_dir, "w") as f:
         f.write(anno_json)
+
+    if not os.path.exists(target_path):
+        os.makedirs(target_path)
+    for img_name in new_images.file_name:
+        _source_path = os.path.join(images_path, img_name)
+        _target_path = os.path.join(target_path, img_name)
+        shutil.copyfile(_source_path, _target_path)
+
     print(f'Create tiny {dataset_type} dataset successfully!')
 
 create_tiny_dataset(dataset_type=dataset_type[0])

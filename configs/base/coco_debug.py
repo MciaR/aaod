@@ -58,7 +58,8 @@ val_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         ann_file='annotations/tiny_val2017.json',
-        data_prefix=dict(img='images/val2017/'),
+        # data_prefix=dict(img='adv/fr_r101/'),
+        data_prefix=dict(img='images/val2017'),
         test_mode=True,
         pipeline=test_pipeline,
         backend_args=backend_args))
