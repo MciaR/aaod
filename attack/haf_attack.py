@@ -16,7 +16,7 @@ class HAFAttack(BaseAttack):
                  stage: list = [0, 1], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好
                  p: int = 2, # attack param
                  eplison: float = 0.1,  # attack param
-                 M: int = 1000, # attack param, max step of generating perbutaion.
+                 M: int = 350, # attack param, max step of generating perbutaion.
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, eplison=eplison, stage=stage, M=M))
 
@@ -174,7 +174,7 @@ class HAFAttack(BaseAttack):
         
         # params
         step = 0
-        optimizer = torch.optim.Adam(params=[r], lr=0.01)
+        optimizer = torch.optim.Adam(params=[r], lr=0.1)
         loss_pertub = torch.nn.MSELoss()
         loss_distance = torch.nn.MSELoss()
         # direct_loss = torch.nn.
@@ -198,10 +198,10 @@ class HAFAttack(BaseAttack):
 
             step += 1
 
-            if step % 10 == 0:
-                print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
+            # if step % 10 == 0:
+                # print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
 
-        print("Generate adv compeleted!")
+        # print("Generate adv compeleted!")
 
         pertub = self.reverse_augment(x=(r.squeeze() - clean_image.squeeze()), datasample=data['data_samples'][0])
         adv_image = self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0])
