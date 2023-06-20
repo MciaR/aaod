@@ -137,7 +137,8 @@ class ExpVisualizer():
                 plt.title(f"{tuple(_feature.shape)}", fontsize=10)
                 plt.imshow(feature_map)
                 ind += 1
-
+        
+        # for fr
         # ====== Fourth row: each level pred results of neck ======            
         # for i in range(col):
         #     plt.subplot(row, col, ind)
