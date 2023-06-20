@@ -13,10 +13,10 @@ class HAFAttack(BaseAttack):
     def __init__(self, 
                  cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
                  ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
-                 stage: list = [0, 1], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好
+                 stage: list = [0], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
                  p: int = 2, # attack param
                  eplison: float = 0.1,  # attack param
-                 M: int = 350, # attack param, max step of generating perbutaion.
+                 M: int = 1000, # attack param, max step of generating perbutaion. 300 for fr, 1000 for ssd.
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, eplison=eplison, stage=stage, M=M))
 
@@ -68,7 +68,8 @@ class HAFAttack(BaseAttack):
         pad_shape = datasample.pad_shape
 
         mean = [123.675, 116.28, 103.53]
-        std = [58.395, 57.12, 57.375]
+        # std = [58.395, 57.12, 57.375] # for fr
+        std = [1, 1, 1] # for ssd
         mean_t = torch.tensor(mean, device=self.device).view(-1, 1, 1)
         std_t = torch.tensor(std, device=self.device).view(-1, 1, 1)
 
@@ -84,9 +85,16 @@ class HAFAttack(BaseAttack):
 
         ori_pic = ori_pic.detach().cpu().numpy()
 
-        ori_pic, _ = mmcv.imrescale(
+        # for fr
+        # ori_pic, _ = mmcv.imrescale(
+        #                     ori_pic,
+        #                     ori_shape,
+        #                     interpolation='bilinear',
+        #                     return_scale=True,
+        #                     backend='cv2')
+        ori_pic, _, _ = mmcv.imresize(
                             ori_pic,
-                            ori_shape,
+                            (ori_shape[1], ori_shape[0]),
                             interpolation='bilinear',
                             return_scale=True,
                             backend='cv2')
@@ -170,16 +178,17 @@ class HAFAttack(BaseAttack):
         # initialize r
         data = self.get_data_from_img(img=x)
         clean_image = data['inputs']
-        r = torch.randn(clean_image.shape, requires_grad=True, device=self.device)
+        # r = torch.randn(clean_image.shape, requires_grad=True, device=self.device) # for fr
+        r = clean_image.clone() + torch.randn(clean_image.shape, requires_grad=True, device=self.device) # for ssd
+        r.retain_grad()
         
         # params
         step = 0
-        optimizer = torch.optim.Adam(params=[r], lr=0.1)
+        optimizer = torch.optim.Adam(params=[r], lr=0.05)
         loss_pertub = torch.nn.MSELoss()
         loss_distance = torch.nn.MSELoss()
         # direct_loss = torch.nn.
-        alpha = 0.25
-        
+        alpha = 0.125 # 0.125 for ssd300, 0.25 for fr
 
         while step < M:
             # calculate output featmap
@@ -198,8 +207,8 @@ class HAFAttack(BaseAttack):
 
             step += 1
 
-            # if step % 10 == 0:
-            #     print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
+            if step % 10 == 0:
+                print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
 
         # print("Generate adv compeleted!")
 

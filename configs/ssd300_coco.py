@@ -1,5 +1,5 @@
 _base_ = [
-    'ssd300.py', 'base/coco_debug.py',
+    'ssd300.py', 'base/coco_datasets.py',
     'base/schedule_2x.py', 'base/default_runtime.py'
 ]
 

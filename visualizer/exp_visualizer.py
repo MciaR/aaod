@@ -118,7 +118,7 @@ class ExpVisualizer():
                 plt.yticks([],[])
                 if i == 0:
                     plt.ylabel(f"Backbone featmap")
-                _feature = backbone_feat[i].squeeze()
+                _feature = backbone_feat[i].squeeze(0)
                 feature_map = self.visualizer.draw_featmap(_feature, overlaid_image, channel_reduction='squeeze_mean', grey=grey)
                 plt.title(f"{tuple(_feature.shape)}", fontsize=10)
                 plt.imshow(feature_map)
@@ -132,29 +132,29 @@ class ExpVisualizer():
                 plt.yticks([],[])
                 if i == 0:
                     plt.ylabel(f"Fpn featmap")
-                _feature = neck_feat[i].squeeze()
+                _feature = neck_feat[i].squeeze(0)
                 feature_map = self.visualizer.draw_featmap(_feature, overlaid_image, channel_reduction='squeeze_mean', grey=grey)
                 plt.title(f"{tuple(_feature.shape)}", fontsize=10)
                 plt.imshow(feature_map)
                 ind += 1
 
         # ====== Fourth row: each level pred results of neck ======            
-        for i in range(col):
-            plt.subplot(row, col, ind)
-            plt.xticks([],[])
-            plt.yticks([],[])
-            if i == 0:
-                plt.ylabel(f"Pred result")
-            pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
-            neck_pred = self.visualizer.draw_dt_gt(
-                name='pred',
-                image=_image,
-                draw_gt=False,
-                data_sample=pred_res,
-                pred_score_thr=show_thr)
-            plt.title(f"Fpn {i} pred", fontsize=10)
-            plt.imshow(neck_pred)
-            ind += 1
+        # for i in range(col):
+        #     plt.subplot(row, col, ind)
+        #     plt.xticks([],[])
+        #     plt.yticks([],[])
+        #     if i == 0:
+        #         plt.ylabel(f"Pred result")
+        #     pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
+        #     neck_pred = self.visualizer.draw_dt_gt(
+        #         name='pred',
+        #         image=_image,
+        #         draw_gt=False,
+        #         data_sample=pred_res,
+        #         pred_score_thr=show_thr)
+        #     plt.title(f"Fpn {i} pred", fontsize=10)
+        #     plt.imshow(neck_pred)
+        #     ind += 1
 
         # ====== Fiveth row: pred ======
         plt.subplot(row, col, ind)
