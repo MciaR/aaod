@@ -209,7 +209,7 @@ class HAFAttack(BaseAttack):
             if step % 10 == 0:
                 print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
 
-        # print("Generate adv compeleted!")
+        print("Generate adv compeleted!")
 
         pertub = self.reverse_augment(x=(r.squeeze() - clean_image.squeeze()), datasample=data['data_samples'][0])
         adv_image = self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0])
