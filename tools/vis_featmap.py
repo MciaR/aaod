@@ -7,10 +7,10 @@ def parse_args():
 
 if __name__ == '__main__':
     # 指定模型的配置文件和 checkpoint 文件路径
-    config_file = 'configs/fr_vgg16_voc.py'
-    checkpoint_file = 'test_model/fr_vgg_16_voc_0638.pth'
-    # config_file = 'configs/faster_rcnn_r101_fpn_coco.py'
-    # checkpoint_file = 'pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth'
+    # config_file = 'configs/fr_vgg16_voc.py'
+    # checkpoint_file = 'test_model/fr_vgg_16_voc_0638.pth'
+    config_file = 'configs/faster_rcnn_r101_fpn_coco.py'
+    checkpoint_file = 'pretrained/fr_r101_coco_0394.pth'
     # config_file = 'configs/ssd300_coco.py'
     # checkpoint_file = 'pretrained/ssd/ssd300_coco_0255.pth'
     # config_file = 'configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py'
