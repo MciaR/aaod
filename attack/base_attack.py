@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+from PIL import Image
 from mmcv.transforms import Compose
 from mmdet.utils import get_test_pipeline_cfg
 from mmdet.apis import init_detector, inference_detector
@@ -56,8 +57,8 @@ class BaseAttack():
             save (bool): whether save noise and adv.
         Return:
             result (torch.Tensor | np.ndarray): result of inference.
-            pertub_path (str): if `save=True`, it will return path of pertub noise.
-            adv_path (str):  if `save=True` it will return path of adversarial sample.
+            pertub_path (str): if `save=True`, it will return path of pertub noise, otherwise return np.ndarray of pertub noise.
+            adv_path (str):  if `save=True` it will return path of adversarial sample, otherwise return np.ndarray of adv sample.
         """
         # get adversarial samples, kwargs must be implemented.
         pertub, adv = self.generate_adv_samples(x=img, **self.attack_params)
@@ -67,21 +68,24 @@ class BaseAttack():
         if save:
             attack_name = os.path.basename(__file__).split('.')[0]
             save_dir = 'ad_result/' + attack_name
-            img_name = img.split('/')[-1]
+            img_name = os.path.basename(img)
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             ad_img_path = os.path.join(save_dir, img_name)
             pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name) 
 
-            cv2.imwrite(ad_img_path, adv)
-            cv2.imwrite(pertub_img_path, pertub)
+            adv_image = Image.fromarray(adv.astype(np.uint8))
+            pertub_image = Image.fromarray(pertub.astype(np.uint8))
+
+            adv_image.save(ad_img_path)
+            pertub_image.save(pertub_img_path)
             
             assert os.path.exists(ad_img_path) and os.path.exists(pertub_img_path), \
                 f'`{ad_img_path}` or `{pertub_img_path}` does not save successfully!.'
             
             return result, pertub_img_path, ad_img_path
         else:
-            return result
+            return result, pertub.astype(np.uint8), adv.astype(np.uint8)
     
     def get_data_from_img(self, img):
         """Get preprocessed data from img path

@@ -1,5 +1,7 @@
 from visualizer import ExpVisualizer
 from attack import HAFAttack
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
 
 def parse_args():
     pass

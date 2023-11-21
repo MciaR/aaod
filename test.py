@@ -47,12 +47,26 @@
 
 # print(a-ori_pic)
 # cv2.imwrite('ori_pic.png', ori_pic)
-import torch
+# import torch
 
-# 创建一个示例张量
-tensor = torch.rand((2, 3, 4))
+# # 创建一个示例张量
+# tensor = torch.rand((2, 3, 4))
 
-# 计算张量的2范数
-norm = torch.norm(tensor, p=2)
+# # 计算张量的2范数
+# norm = torch.norm(tensor, p=2)
 
-print(norm.item())  # 输出: 5.4772257804870605
+# print(norm.item())  # 输出: 5.4772257804870605
+from PIL import Image
+import numpy as np
+
+img_list = np.random.rand(640, 640, 3) * 255
+img_np = np.array(img_list).astype(np.uint8)
+img = Image.fromarray(img_np)
+img.save('test.png')
+
+_img = Image.open('test.png')
+_img_np = np.array(_img)
+
+print(img_np)
+print(_img_np)
+print(img_np == _img_np) # if png, is TRUE, if jpg or jpeg, is FALSE, because of the compress

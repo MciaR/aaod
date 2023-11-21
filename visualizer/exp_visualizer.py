@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
 
 from attack import BaseAttack
 from visualizer import AAVisualizer
@@ -226,12 +227,15 @@ class ExpVisualizer():
             data_sample=clean_pred,
             pred_score_thr=show_thr)
 
-        ad_result, pertub_img_path, ad_image_path = self.attacker.attack(img_path, save=True)
+        # ad_result, pertub_img_path, ad_image_path = self.attacker.attack(img_path, save=True)
 
-        ad_image = Image.open(ad_image_path)
-        _ad_image = np.array(ad_image)
-        pertub_img = Image.open(pertub_img_path)
-        _pertub_img = np.array(pertub_img)
+        # ad_image = Image.open(ad_image_path)
+        # _ad_image = np.array(ad_image)
+        # pertub_img = Image.open(pertub_img_path)
+        # _pertub_img = np.array(pertub_img)
+
+        # 这里最好采用这种方式，因为PIL如果存jpg格式的话会对图片进行压缩，导致像素会有一定的不一致。（存PNG可以解决这个问题）
+        ad_result, _pertub_img, _ad_image = self.attacker.attack(img_path, save=False)
 
         ad_pred = self.visualizer.draw_dt_gt(
             name='attack',
@@ -257,4 +261,4 @@ class ExpVisualizer():
             plt.savefig('records/pics/attack/{}_{}_{}.png'.format('attack', self.get_timestamp(), img_name))
         plt.show()
 
-        self.show_stage_results(img = f'ad_result/base_attack/{img_path.split("/")[-1]}', save=True, grey=True)
+        self.show_stage_results(img = f'ad_result/base_attack/{os.path.basename(img_path)}', save=True, grey=True)
