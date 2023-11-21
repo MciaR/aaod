@@ -203,8 +203,8 @@ class ExpVisualizer():
         else:
             img_path = data_sample.img_path
     
-        row, col = (1, 5)
-        plt.figure(frameon=False, figsize=(12, 8), dpi=300)
+        row, col = (4, 5)
+        plt.figure(frameon=False, figsize=(12, 10), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         # ====== ori_image & noise & adv_image & pred results =======
@@ -227,15 +227,16 @@ class ExpVisualizer():
             data_sample=clean_pred,
             pred_score_thr=show_thr)
 
-        # ad_result, pertub_img_path, ad_image_path = self.attacker.attack(img_path, save=True)
+        # base_attack 里存了png
+        ad_result, pertub_img_path, ad_image_path = self.attacker.attack(img_path, save=True)
 
-        # ad_image = Image.open(ad_image_path)
-        # _ad_image = np.array(ad_image)
-        # pertub_img = Image.open(pertub_img_path)
-        # _pertub_img = np.array(pertub_img)
+        ad_image = Image.open(ad_image_path)
+        _ad_image = np.array(ad_image)
+        pertub_img = Image.open(pertub_img_path)
+        _pertub_img = np.array(pertub_img)
 
         # 这里最好采用这种方式，因为PIL如果存jpg格式的话会对图片进行压缩，导致像素会有一定的不一致。（存PNG可以解决这个问题）
-        ad_result, _pertub_img, _ad_image = self.attacker.attack(img_path, save=False)
+        # ad_result, _pertub_img, _ad_image = self.attacker.attack(img_path, save=False)
 
         ad_pred = self.visualizer.draw_dt_gt(
             name='attack',
@@ -244,21 +245,74 @@ class ExpVisualizer():
             data_sample=ad_result,
             pred_score_thr=show_thr)
         
+        ind = 1
+        # ===== First row: result =======
         image_list = [_gt_image, _clean_image, _pertub_img, _ad_image, ad_pred]
         image_name = ['gt', 'Ori image', 'Pertub noise ', 'Adversarial sample', 'Attack result']
         for i in range(col):
-            plt.subplot(row, col, i + 1)
+            plt.subplot(row, col, ind)
             plt.xticks([],[])
             plt.yticks([],[])
             if i == 0:
                 plt.ylabel(model_name)
             plt.title(f'{image_name[i]}', fontsize=10)
             plt.imshow(image_list[i])  
+            ind += 1
+
+        # ====== Second row: ori backbone ======
+        ori_backbone_feat = self.runner._forward(stage='backbone', img=img_path)
+        for i in range(col):
+            if i < len(ori_backbone_feat):
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                if i == 0:
+                    plt.ylabel(f"ori backbone")
+                _feature = ori_backbone_feat[i].squeeze(0)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
+                plt.title(f"stage {i}", fontsize=10)
+                plt.imshow(feature_map)
+            ind += 1
+
+        # ====== Third row: gt backbone ======
+        # target featmap
+        gt_backbone_feat = []
+        for i in range(len(ori_backbone_feat)):
+            if i in self.attacker.stage:
+                gt_backbone_feat.append(self.attacker.modify_featmap(ori_backbone_feat[i]))
+            else:
+                gt_backbone_feat.append(ori_backbone_feat[i])
+
+        for i in range(col):
+            if i < len(gt_backbone_feat):
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                if i == 0:
+                    plt.ylabel(f"adv gt backbone")
+                _feature = gt_backbone_feat[i].squeeze(0)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
+                plt.title(f"stage {i}", fontsize=10)
+                plt.imshow(feature_map)
+            ind += 1
+
+        # ===== Fourth row: adv backbone =====
+        adv_backbone_feat = self.runner._forward(stage='backbone', img=ad_image_path)
+        for i in range(col):
+            if i < len(adv_backbone_feat):
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                if i == 0:
+                    plt.ylabel(f"adv backbone")
+                _feature = adv_backbone_feat[i].squeeze(0)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
+                plt.title(f"stage {i}", fontsize=10)
+                plt.imshow(feature_map)
+            ind += 1  
 
         plt.tight_layout()
         if save:
             img_name = img_path.split('/')[-1].split('.')[0]
-            plt.savefig('records/pics/attack/{}_{}_{}.png'.format('attack', self.get_timestamp(), img_name))
+            plt.savefig('records/attack_result/{}_{}_{}.png'.format('attack', self.get_timestamp(), img_name))
         plt.show()
-
-        self.show_stage_results(img = f'ad_result/base_attack/{os.path.basename(img_path)}', save=True, grey=True)

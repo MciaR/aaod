@@ -20,6 +20,7 @@ class HAFAttack(BaseAttack):
                  M: int = 300, # attack param, max step of generating perbutaion. 300 for fr, 1000 for ssd.
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, alpha=alpha, stage=stage, M=M, lr=lr))
+        self.stage = stage
 
     def get_topk_info(
             self,

@@ -68,7 +68,7 @@ class BaseAttack():
         if save:
             attack_name = os.path.basename(__file__).split('.')[0]
             save_dir = 'ad_result/' + attack_name
-            img_name = os.path.basename(img)
+            img_name = os.path.basename(img).split('.')[0] + '.png'
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             ad_img_path = os.path.join(save_dir, img_name)
