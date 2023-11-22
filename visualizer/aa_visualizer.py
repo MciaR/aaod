@@ -246,7 +246,7 @@ class AAVisualizer(DetLocalVisualizer):
         # save it as a video during video inference.
         return drawn_img
     
-    def _forward(self, stage, img):
+    def _forward(self, feature_type, img):
         """ Get model output.
         
         Args:
@@ -260,7 +260,7 @@ class AAVisualizer(DetLocalVisualizer):
 
         # forward the model
         with torch.no_grad():
-            if stage == 'backbone':
+            if feature_type == 'backbone':
                 feat = self.model.backbone(input_data)
             else:
                 feat = self.model.backbone(input_data)

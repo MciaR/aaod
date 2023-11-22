@@ -113,7 +113,7 @@ class BaseAttack():
 
         return data
     
-    def _forward(self, stage, img):
+    def _forward(self, feature_type, img):
         """ Get model output.
         
         Args:
@@ -127,7 +127,7 @@ class BaseAttack():
 
         # forward the model
         with torch.no_grad():
-            if stage == 'backbone':
+            if feature_type == 'backbone':
                 feat = self.model.backbone(input_data)
             else:
                 feat = self.model.backbone(input_data)

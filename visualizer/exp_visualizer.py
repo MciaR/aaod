@@ -184,6 +184,7 @@ class ExpVisualizer():
             img=None,
             data_sample=None,
             save=False,
+            feature_type='backbone',
             show_thr=0.3):
         """Show `ori_img`, `noise`, `adv_samples`, `attack_results`.
         Args:
@@ -191,6 +192,7 @@ class ExpVisualizer():
             model_name (str): name of infer model.
             data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
             save (bool): whether save pic. if it is True, pic will not be shown when running.
+            feature_type (str): `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
             show_thr (float): pred result threshold to show.
         """
         assert self.use_attack, \
@@ -260,14 +262,14 @@ class ExpVisualizer():
             ind += 1
 
         # ====== Second row: ori backbone ======
-        ori_backbone_feat = self.runner._forward(stage='backbone', img=img_path)
+        ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
         for i in range(col):
             if i < len(ori_backbone_feat):
                 plt.subplot(row, col, ind)
                 plt.xticks([],[])
                 plt.yticks([],[])
                 if i == 0:
-                    plt.ylabel(f"ori backbone")
+                    plt.ylabel(f"ori {feature_type}")
                 _feature = ori_backbone_feat[i].squeeze(0)
                 feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
                 plt.title(f"stage {i}", fontsize=10)
@@ -289,7 +291,7 @@ class ExpVisualizer():
                 plt.xticks([],[])
                 plt.yticks([],[])
                 if i == 0:
-                    plt.ylabel(f"adv gt backbone")
+                    plt.ylabel(f"adv gt {feature_type}")
                 _feature = gt_backbone_feat[i].squeeze(0)
                 feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
                 plt.title(f"stage {i}", fontsize=10)
@@ -297,14 +299,14 @@ class ExpVisualizer():
             ind += 1
 
         # ===== Fourth row: adv backbone =====
-        adv_backbone_feat = self.runner._forward(stage='backbone', img=ad_image_path)
+        adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
         for i in range(col):
             if i < len(adv_backbone_feat):
                 plt.subplot(row, col, ind)
                 plt.xticks([],[])
                 plt.yticks([],[])
                 if i == 0:
-                    plt.ylabel(f"adv backbone")
+                    plt.ylabel(f"adv {feature_type}")
                 _feature = adv_backbone_feat[i].squeeze(0)
                 feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
                 plt.title(f"stage {i}", fontsize=10)
@@ -313,6 +315,6 @@ class ExpVisualizer():
 
         plt.tight_layout()
         if save:
-            img_name = img_path.split('/')[-1].split('.')[0]
+            img_name = os.path.basename(img_path).split('.')[0]
             plt.savefig('records/attack_result/{}_{}_{}.png'.format('attack', self.get_timestamp(), img_name))
         plt.show()

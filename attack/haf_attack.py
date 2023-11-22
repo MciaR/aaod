@@ -13,13 +13,14 @@ class HAFAttack(BaseAttack):
     def __init__(self, 
                  cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
                  ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
-                 stage: list = [0, 1], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
+                 feature_type = 'backbone', # `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
+                 stage: list = [4], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
                  p: int = 2, # attack param
                  alpha: float = 0.25,  # attack param, factor of distance loss. 0.125 for ssd300, 0.25 for fr
                  lr: float = 0.05, # default 0.05
                  M: int = 300, # attack param, max step of generating perbutaion. 300 for fr, 1000 for ssd.
                  device='cuda:0') -> None:
-        super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, alpha=alpha, stage=stage, M=M, lr=lr))
+        super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, alpha=alpha, stage=stage, M=M, lr=lr, feature_type=feature_type))
         self.stage = stage
 
     def get_topk_info(
@@ -161,7 +162,7 @@ class HAFAttack(BaseAttack):
 
     #     return pertub, adv_image
 
-    def generate_adv_samples(self, x, stage, alpha, p, M, lr):
+    def generate_adv_samples(self, x, stage, alpha, p, M, lr, feature_type):
         """Attack method to generate adversarial image.
         Args:
             x (str): clean image path.
@@ -172,7 +173,7 @@ class HAFAttack(BaseAttack):
             adv (np.ndarray | torch.Tensor): adversarial image.
         """
         # get feature map of clean img.
-        bb_outs = self._forward(img=x, stage='backbone')
+        bb_outs = self._forward(img=x, feature_type=feature_type)
         # target featmap
         target_fm = [bb_outs[i] for i in stage]
         # featmap that the attack should be generated
@@ -194,6 +195,8 @@ class HAFAttack(BaseAttack):
         while step < M:
             # calculate output featmap
             pertub_bb_output = self.model.backbone(r)
+            if feature_type == 'neck':
+                pertub_bb_output = self.model.neck(pertub_bb_output)
             pertub_featmap = [pertub_bb_output[i] for i in stage]
 
             l1 = 0
