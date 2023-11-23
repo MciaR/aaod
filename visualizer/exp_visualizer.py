@@ -185,6 +185,7 @@ class ExpVisualizer():
             data_sample=None,
             save=False,
             feature_type='backbone',
+            feature_grey=True,
             show_thr=0.3):
         """Show `ori_img`, `noise`, `adv_samples`, `attack_results`.
         Args:
@@ -193,6 +194,7 @@ class ExpVisualizer():
             data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
             save (bool): whether save pic. if it is True, pic will not be shown when running.
             feature_type (str): `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
+            feature_grey (bool): whether show grey feature map or heatmap.
             show_thr (float): pred result threshold to show.
         """
         assert self.use_attack, \
@@ -271,7 +273,7 @@ class ExpVisualizer():
                 if i == 0:
                     plt.ylabel(f"ori {feature_type}")
                 _feature = ori_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey)
                 plt.title(f"stage {i}", fontsize=10)
                 plt.imshow(feature_map)
             ind += 1
@@ -281,7 +283,7 @@ class ExpVisualizer():
         gt_backbone_feat = []
         for i in range(len(ori_backbone_feat)):
             if i in self.attacker.stage:
-                gt_backbone_feat.append(self.attacker.modify_featmap(ori_backbone_feat[i]))
+                gt_backbone_feat.append(self.attacker.modify_featmap(ori_backbone_feat[i]).unsqueeze(1))
             else:
                 gt_backbone_feat.append(ori_backbone_feat[i])
 
@@ -293,7 +295,7 @@ class ExpVisualizer():
                 if i == 0:
                     plt.ylabel(f"adv gt {feature_type}")
                 _feature = gt_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey)
                 plt.title(f"stage {i}", fontsize=10)
                 plt.imshow(feature_map)
             ind += 1
@@ -308,7 +310,7 @@ class ExpVisualizer():
                 if i == 0:
                     plt.ylabel(f"adv {feature_type}")
                 _feature = adv_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=True)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey)
                 plt.title(f"stage {i}", fontsize=10)
                 plt.imshow(feature_map)
             ind += 1  

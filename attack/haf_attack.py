@@ -16,8 +16,8 @@ class HAFAttack(BaseAttack):
                  feature_type = 'backbone', # `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
                  stage: list = [4], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
                  p: int = 2, # attack param
-                 alpha: float = 0.25,  # attack param, factor of distance loss. 0.125 for ssd300, 0.25 for fr
-                 lr: float = 0.05, # default 0.05
+                 alpha: float = 0,  # attack param, factor of distance loss. 0.125 for ssd300, 0.25 for fr
+                 lr: float = 0.005, # default 0.05
                  M: int = 300, # attack param, max step of generating perbutaion. 300 for fr, 1000 for ssd.
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, alpha=alpha, stage=stage, M=M, lr=lr, feature_type=feature_type))
@@ -54,6 +54,7 @@ class HAFAttack(BaseAttack):
             scale_factor (float): miniumize factor
         """
         N, C, H, W = featmap.shape
+        modified_feat = None
         for sample_ind in range(N):
             sample_featmap = featmap[sample_ind]
             k = int(H * W * modify_percent)
@@ -61,9 +62,15 @@ class HAFAttack(BaseAttack):
             _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
 
             # scale indices value in each featmap
-            featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+            # featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+            mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] = mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+            mean_featmap = mean_featmap.unsqueeze(0)
+            if modified_feat is None:
+                modified_feat = mean_featmap
+            else:
+                torch.stack((modified_feat, mean_featmap), dim=0)
 
-        return featmap
+        return modified_feat
 
     def reverse_augment(self, x, datasample):
         """Reverse tensor to input image."""
@@ -189,7 +196,8 @@ class HAFAttack(BaseAttack):
         # params
         step = 0
         optimizer = torch.optim.Adam(params=[r], lr=lr)
-        loss_pertub = torch.nn.MSELoss()
+        # loss_pertub = torch.nn.MSELoss()
+        loss_pertub = torch.nn.BCELoss()
         loss_distance = torch.nn.MSELoss()
 
         while step < M:
@@ -201,7 +209,15 @@ class HAFAttack(BaseAttack):
 
             l1 = 0
             for p_fm, gt_fm in zip(pertub_featmap, attack_gt_featmap):
-                l1 += (1 / len(stage) * loss_pertub(p_fm, gt_fm)) 
+                # l1 += (1 / len(stage) * loss_pertub(p_fm.mean(dim=1), gt_fm)) 
+                # gt_fm : (B, H, W), p_fm: (B, C, H, W)
+                p_fm_vector = p_fm.mean(dim=1).view(gt_fm.shape[0], -1)
+                gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1)
+                cosine_similarity = F.cosine_similarity(p_fm_vector, gt_fm_vector).unsqueeze(-1)
+
+                labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
+                l1 = loss_pertub(cosine_similarity, labels)
+
             l2 = loss_distance(r, clean_image)
             loss = l1 + alpha * l2
 
