@@ -14,14 +14,18 @@ class HAFAttack(BaseAttack):
                  cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
                  ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
                  feature_type = 'backbone', # `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
+                 channel_mean=False, # means use `C` (channel) to comput loss, the featmap shape is (B, C, H, W).
                  stage: list = [4], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
                  p: int = 2, # attack param
-                 alpha: float = 0,  # attack param, factor of distance loss. 0.125 for ssd300, 0.25 for fr
+                 alpha: float = 5,  # attack param, factor of distance loss. 0.125 for ssd300, 0.25 for fr
                  lr: float = 0.005, # default 0.05
-                 M: int = 300, # attack param, max step of generating perbutaion. 300 for fr, 1000 for ssd.
+                 M: int = 1000, # attack param, max step of generating perbutaion. 300 for fr, 1000 for ssd.
+                 adv_type='direct', # `direct` or `residual`, `direct` means cal pertub noise as whole image directly, `residual` means only cal pertub noise.
+                 constrain='consine_sim', #  - default `consine_sim`, that means use consine similarity to comput loss. `distance`, that means use distance function to comput loss.
                  device='cuda:0') -> None:
-        super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, alpha=alpha, stage=stage, M=M, lr=lr, feature_type=feature_type))
+        super().__init__(cfg_file, ckpt_file, device=device, attack_params=dict(p=p, alpha=alpha, stage=stage, M=M, lr=lr, feature_type=feature_type, adv_type=adv_type, constrain=constrain, channel_mean=channel_mean))
         self.stage = stage
+        self.channel_mean = channel_mean
 
     def get_topk_info(
             self,
@@ -43,34 +47,54 @@ class HAFAttack(BaseAttack):
         return values, indices
     
     def modify_featmap(
-            self,
-            featmap: torch.Tensor,
-            modify_percent: float = 0.7,
-            scale_factor: float = 0.01):
-        """Modify topk value in each featmap (H, W).
-        Args:
-            featmap (torch.Tensor): shape `(N, C, H, W)`
-            mean_featmap
-            scale_factor (float): miniumize factor
-        """
+        self,
+        featmap: torch.Tensor    
+    ):
+        """Modify activation of featmap to mean."""
+    
         N, C, H, W = featmap.shape
-        modified_feat = None
+        modify_feat = torch.ones(N, C, H, W, device=self.device)
         for sample_ind in range(N):
             sample_featmap = featmap[sample_ind]
-            k = int(H * W * modify_percent)
-            mean_featmap = torch.mean(sample_featmap, dim=0)
-            _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
+            # (C, H*W)
+            sample_featmap = sample_featmap.reshape(C, -1)
+            # (C,)
+            channel_mean = torch.mean(sample_featmap, dim=-1)
+            for c in range(C):
+                modify_feat[sample_ind][c, :, :] = modify_feat[sample_ind][c, :, :] * channel_mean[c]
 
-            # scale indices value in each featmap
-            # featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
-            mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] = mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
-            mean_featmap = mean_featmap.unsqueeze(0)
-            if modified_feat is None:
-                modified_feat = mean_featmap
-            else:
-                torch.stack((modified_feat, mean_featmap), dim=0)
+        return modify_feat
 
-        return modified_feat
+
+    # def modify_featmap(
+    #         self,
+    #         featmap: torch.Tensor,
+    #         modify_percent: float = 0.7,
+    #         scale_factor: float = 0.01):
+    #     """Modify topk value in each featmap (H, W).
+    #     Args:
+    #         featmap (torch.Tensor): shape `(N, C, H, W)`
+    #         mean_featmap
+    #         scale_factor (float): miniumize factor
+    #     """
+    #     N, C, H, W = featmap.shape
+    #     modified_feat = None
+    #     for sample_ind in range(N):
+    #         sample_featmap = featmap[sample_ind]
+    #         k = int(H * W * modify_percent)
+    #         mean_featmap = torch.mean(sample_featmap, dim=0)
+    #         _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
+
+    #         # scale indices value in each featmap
+    #         # featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+    #         mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] = mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+    #         mean_featmap = mean_featmap.unsqueeze(0)
+    #         if modified_feat is None:
+    #             modified_feat = mean_featmap
+    #         else:
+    #             torch.stack((modified_feat, mean_featmap), dim=0)
+
+    #     return modified_feat
 
     def reverse_augment(self, x, datasample):
         """Reverse tensor to input image."""
@@ -169,12 +193,61 @@ class HAFAttack(BaseAttack):
 
     #     return pertub, adv_image
 
-    def generate_adv_samples(self, x, stage, alpha, p, M, lr, feature_type):
+    def test_adv_result(self, clean_img, adv_img, stage, feature_type='neck', metric='std'):
+        """Output advesrairal result compared to clean."""
+
+        clean_featmap = self.model.backbone(clean_img)
+        adv_featmap = self.model.backbone(adv_img)
+        if feature_type == 'neck':
+            clean_featmap = self.model.neck(clean_featmap)
+            adv_featmap = self.model.neck(adv_featmap)
+
+        # cal std
+        if metric == 'std':
+            stage_std_clean = []
+            stage_std_adv = []
+            for i in range(len(clean_featmap)):
+                stage_clean_featmap = clean_featmap[i] # (B, C, H, W)
+                stage_adv_featmap = adv_featmap[i]
+
+                B, C, H, W = stage_adv_featmap.shape
+
+                batch_std_clean = 0
+                batch_std_adv = 0
+
+                for sample_ind in range(B):
+                    sample_clean_featmap = stage_clean_featmap[sample_ind] # (C, H, W)
+                    sample_adv_featmap = stage_adv_featmap[sample_ind]
+
+                    std_clean = torch.std(sample_clean_featmap.view(C, -1), dim=-1) # (C, )
+                    std_adv = torch.std(sample_adv_featmap.view(C, -1), dim=-1)
+
+                    batch_std_clean += std_clean.mean() # (1, )
+                    batch_std_adv += std_adv.mean() # (1, )
+
+                batch_std_adv /= B
+                batch_std_clean /= B
+
+                stage_std_clean.append(batch_std_clean.cpu().detach().numpy())
+                stage_std_adv.append(batch_std_adv.cpu().detach().numpy())
+
+            print(stage, stage_std_clean, stage_std_adv, sep='\n')
+
+    def generate_adv_samples(self, x, stage, alpha, p, M, lr, feature_type, adv_type='direct', constrain='consine_sim', channel_mean=False):
         """Attack method to generate adversarial image.
         Args:
             x (str): clean image path.
             eplison (float): niose strength.    
             p (int): default `2`, p-norm to calculate distance between clean and adv image.
+            adv_type (str): 
+                - default `residual`, that means only optimize the noise added to image. 
+                - `direct`, that means optimize the whole adversarial sample.
+            constrain (str):
+                - default `consine_sim`, that means use consine similarity to comput loss.
+                - `distance`, that means use distance function to comput loss.
+            channel_mean (bool):
+                - default `False`, means use `C` (channel) to comput loss, the featmap shape is (B, C, H, W).
+                - `True`, calculate each point mean by channel-wise, the featmap shape is (B, H, W).
         Return:
             noise (np.ndarray | torch.Tensor): niose which add to clean image.
             adv (np.ndarray | torch.Tensor): adversarial image.
@@ -189,15 +262,17 @@ class HAFAttack(BaseAttack):
         # initialize r
         data = self.get_data_from_img(img=x)
         clean_image = data['inputs']
-        r = torch.randn(clean_image.shape, requires_grad=True, device=self.device) # for fr
-        # r = clean_image.clone() + torch.randn(clean_image.shape, requires_grad=True, device=self.device) # for ssd
-        # r.retain_grad()
+
+        if adv_type == 'residual':
+            r = clean_image.clone() + torch.randn(clean_image.shape, requires_grad=True, device=self.device) # for ssd
+            r.retain_grad()
+        else:
+            r = torch.randn(clean_image.shape, requires_grad=True, device=self.device) # for fr
         
         # params
         step = 0
         optimizer = torch.optim.Adam(params=[r], lr=lr)
-        # loss_pertub = torch.nn.MSELoss()
-        loss_pertub = torch.nn.BCELoss()
+        loss_pertub = torch.nn.BCELoss() if constrain == 'consine_sim' else torch.nn.MSELoss()
         loss_distance = torch.nn.MSELoss()
 
         while step < M:
@@ -208,15 +283,30 @@ class HAFAttack(BaseAttack):
             pertub_featmap = [pertub_bb_output[i] for i in stage]
 
             l1 = 0
+            
             for p_fm, gt_fm in zip(pertub_featmap, attack_gt_featmap):
-                # l1 += (1 / len(stage) * loss_pertub(p_fm.mean(dim=1), gt_fm)) 
-                # gt_fm : (B, H, W), p_fm: (B, C, H, W)
-                p_fm_vector = p_fm.mean(dim=1).view(gt_fm.shape[0], -1)
-                gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1)
-                cosine_similarity = F.cosine_similarity(p_fm_vector, gt_fm_vector).unsqueeze(-1)
+                if channel_mean:
+                    # gt_fm : (B, H, W), p_fm: (B, C, H, W)
+                    if constrain == 'consine_sim':
+                        p_fm_vector = p_fm.mean(dim=1).view(gt_fm.shape[0], -1) # (B, H*W)
+                        gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1) # (B, H*W)
+                        cosine_similarity = F.cosine_similarity(p_fm_vector, gt_fm_vector).unsqueeze(-1)
 
-                labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
-                l1 = loss_pertub(cosine_similarity, labels)
+                        labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
+                        l1 += (1 / len(stage)) * loss_pertub(cosine_similarity, labels)
+                    else:
+                        l1 += (1 / len(stage) * loss_pertub(p_fm.mean(dim=1), gt_fm)) 
+                else:
+                    # gt_fm: (B, C, H, W), p_fm: (B, C, H, W)
+                    if constrain == 'consine_sim':
+                        p_fm_vector = p_fm.view(gt_fm.shape[0], -1) # (B, C*H*W)
+                        gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1) # (B, C*H*W)
+                        cosine_similarity = F.cosine_similarity(p_fm_vector, gt_fm_vector).unsqueeze(-1)
+
+                        labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
+                        l1 += (1 / len(stage)) * loss_pertub(cosine_similarity, labels)
+                    else:
+                        l1 += (1 / len(stage)) * loss_pertub(p_fm, gt_fm)
 
             l2 = loss_distance(r, clean_image)
             loss = l1 + alpha * l2
@@ -232,7 +322,16 @@ class HAFAttack(BaseAttack):
 
         print("Generate adv compeleted!")
 
-        pertub = self.reverse_augment(x=(r.squeeze() - clean_image.squeeze()), datasample=data['data_samples'][0])
-        adv_image = self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0])
+        # 这里用了squeeze实际上是只作为一张图片
+        pertub_tensor = r.squeeze() - clean_image.squeeze()
+        adv_tensor = r.squeeze()
+        if adv_type == 'residual':
+            pertub_tensor += clean_image.squeeze()
+            adv_tensor += clean_image.squeeze()
+
+        pertub = self.reverse_augment(x=pertub_tensor, datasample=data['data_samples'][0])
+        adv_image = self.reverse_augment(x=adv_tensor, datasample=data['data_samples'][0])
+
+        self.test_adv_result(clean_img=clean_image, adv_img=adv_tensor.unsqueeze(0), stage=stage)
 
         return pertub, adv_image

@@ -71,7 +71,86 @@
 # print(_img_np)
 # print(img_np == _img_np) # if png, is TRUE, if jpg or jpeg, is FALSE, because of the compress
 
+# ========================== heatmap test ==============================
+# import torch
+# import cv2
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import os
+# os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-import torch
-a = torch.rand(12, 12, 128)
-print(a.mean(dim=-1).shape)
+# def get_topk_info(
+#         input: torch.Tensor,
+#         k: int = 3,
+#         largest: bool = True,
+#         ):
+#     flatten_tensor = input.flatten()
+#     values, topk_indices = torch.topk(input=flatten_tensor, k=k, dim=0, largest=largest)
+#     assert len(input.shape) == 2, \
+#         f' featmap tensor must be shape (H, W)'
+#     H, W = input.shape
+
+#     h_indices = topk_indices // W
+#     w_indices = topk_indices % W
+
+#     indices = torch.stack((h_indices, w_indices), dim=1)
+
+#     return values, indices
+
+# def generate_featmap():
+
+#     a = torch.tensor([[0.9, 0.8, 0.7], [0.5, 0.4, 0.3]])
+#     scale_factor = 0.01
+#     print(a)
+#     # topk_values, topk_indices = get_topk_info(a)
+#     # print(topk_values, topk_indices)
+#     topk_indices = torch.tensor([[0, 0], [0, 1], [0, 2]])
+#     b = a.clone()
+#     a[topk_indices[:, 0], topk_indices[:, 1]] = a[topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+#     print(a)
+
+#     return b, a, topk_indices
+
+# def cvt_feat2heat(
+#         feat_map: torch.Tensor,
+#         alpha = 0.5,
+#         img = None,
+#         grey = False,
+#         ):
+    
+#     if isinstance(feat_map, torch.Tensor):
+#         feat_map = feat_map.cpu().detach().numpy()
+
+#     norm_img = np.zeros(feat_map.shape)
+#     norm_img = cv2.normalize(feat_map, norm_img, 0, 255, cv2.NORM_MINMAX)
+#     norm_img = np.asarray(norm_img, dtype=np.uint8)
+#     if grey:
+#         heat_img = np.stack((norm_img,) * 3, -1)
+#     else:
+#         heat_img = cv2.applyColorMap(norm_img, cv2.COLORMAP_JET)
+#         heat_img = cv2.cvtColor(heat_img, cv2.COLOR_BGR2RGB)
+#     if img is not None:
+#         heat_img = cv2.addWeighted(img, 1 - alpha, heat_img, alpha, 0)
+#     return heat_img
+
+# row, col = (1, 2)
+# plt.figure(frameon=False, figsize=(12, 3), dpi=300)
+# plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+
+# ori_feat, modified_feat, indices = generate_featmap()
+
+# ori_heatmap = cvt_feat2heat(ori_feat)
+# plt.subplot(row, col, 1)
+# plt.imshow(ori_heatmap)
+# plt.title(f"ori heatmap", fontsize=10)
+
+# modified_heatmap = cvt_feat2heat(modified_feat)
+# plt.subplot(row, col, 2)
+# plt.imshow(modified_heatmap)
+# plt.title(f"modified heatmap", fontsize=10)
+
+# plt.tight_layout()
+# plt.show()
+
+a = 0.005
+print(str(a))

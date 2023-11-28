@@ -18,7 +18,25 @@ if __name__ == '__main__':
     # config_file = 'configs/faster_rcnn_r101_dcn_c3_c5_fpn_coco.py'
     # checkpoint_file = 'pretrained/faster_rcnn/faster_rcnn_r101_fpn_dconv_c3-c5_1x_coco_20200203-1377f13d.pth'
 
-    attacker = HAFAttack(cfg_file=config_file, ckpt_file=checkpoint_file, feature_type='neck')
+    # initialize attacker
+    attack_params = {
+        'cfg_file': config_file,
+        'ckpt_file': checkpoint_file,
+        'feature_type': 'neck',
+        'channel_mean': False,
+        'stage': [4],
+        'p': 2,
+        'alpha': 5,
+        'lr': 0.05,
+        'M': 10,
+    }
+
+    # field which will be saved in result name.
+    remain_list = ['feature_type', 'channel_mean', 'stage', 'alpha', 'lr', 'M']
+    # decide folder which result will be saved.
+    exp_name = 'reduce_std_by_each_channel'
+
+    attacker = HAFAttack(**attack_params)
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)
     # show_layer = 3 # (256, 512, 1024, 2048) channels
     # top_k = 100
@@ -27,5 +45,5 @@ if __name__ == '__main__':
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
     dataset = vis.dataset
     # vis.show_stage_results(data_sample=dataset[60]['data_samples'], save=True, grey=True, show_thr=0.3)
-    vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[0]['data_samples'], feature_type='neck', save=True, feature_grey=False)
+    vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[0]['data_samples'], save=True, feature_grey=False, attack_params=attack_params, remain_list=remain_list, exp_name=exp_name)
     # vis.show_stage_results(img='ad_result/base_attack/000000397133.jpg', save=False, grey=True, show_thr=0.1)
