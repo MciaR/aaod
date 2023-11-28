@@ -26,24 +26,30 @@ if __name__ == '__main__':
         'channel_mean': False,
         'stage': [4],
         'p': 2,
-        'alpha': 5,
+        'alpha': 2,
         'lr': 0.05,
         'M': 10,
+        'adv_type': 'direct', 
+        # 'adv_type': 'residual',
+        # 'constrain': 'distance'
+        'constrain': 'consine_sim'
     }
 
     # field which will be saved in result name.
-    remain_list = ['feature_type', 'channel_mean', 'stage', 'alpha', 'lr', 'M']
+    remain_list = ['feature_type', 'channel_mean', 'stage', 'alpha', 'lr', 'M', 'adv_type', 'constrain']
     # decide folder which result will be saved.
-    exp_name = 'reduce_std_by_each_channel'
+    exp_name = 'reduce_std_by_each_channel/dataset_top200'
 
-    attacker = HAFAttack(**attack_params)
+    attacker = HAFAttack(**attack_params) 
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)
+    dataset = vis.dataset
+
     # show_layer = 3 # (256, 512, 1024, 2048) channels
     # top_k = 100
     # pic_overlay = False
 
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
-    dataset = vis.dataset
     # vis.show_stage_results(data_sample=dataset[60]['data_samples'], save=True, grey=True, show_thr=0.3)
-    vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[0]['data_samples'], save=True, feature_grey=False, attack_params=attack_params, remain_list=remain_list, exp_name=exp_name)
+    for i in range(200):
+        vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], save=True, feature_grey=False, attack_params=attack_params, remain_list=remain_list, exp_name=exp_name)
     # vis.show_stage_results(img='ad_result/base_attack/000000397133.jpg', save=False, grey=True, show_thr=0.1)

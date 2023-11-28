@@ -243,7 +243,7 @@ class ExpVisualizer():
             channel_mean = attack_params['channel_mean']
     
         row, col = (4, 5)
-        plt.figure(frameon=False, figsize=(12, 10), dpi=300)
+        plt.figure(frameon=False, figsize=(12, 8), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         # ====== ori_image & noise & adv_image & pred results =======
@@ -258,7 +258,7 @@ class ExpVisualizer():
             data_sample=data_sample,
             pred_score_thr=show_thr)
         
-        clean_pred = self.visualizer.get_pred(img_path)
+        clean_pred = self.visualizer.get_pred(img_path) # 是经过了NMS处理的
         _clean_image = self.visualizer.draw_dt_gt(
             name='attack',
             image=_image,
@@ -354,7 +354,7 @@ class ExpVisualizer():
             ind += 1  
 
         plt.tight_layout()
-        
+
         if save:
             save_dir = f'records/attack_result/{exp_name}'
             if not os.path.exists(save_dir):

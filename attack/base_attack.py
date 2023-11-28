@@ -94,17 +94,17 @@ class BaseAttack():
         Return:
             data (dict): the data format can forward model.
         """
-        load_from_ndarray = False
+        # load_from_ndarray = False
         if isinstance(img, np.ndarray):
             # TODO: remove img_id.
             data_ = dict(img=img, img_id=0)
-            load_from_ndarray = True
+            # load_from_ndarray = True
         else:
             # TODO: remove img_id.
             data_ = dict(img_path=img, img_id=0)
         # build the data pipeline
-        test_pipeline = self.get_test_pipeline(load_from_ndarray=load_from_ndarray)
-        data_ = test_pipeline(data_)
+        # test_pipeline = self.get_test_pipeline(load_from_ndarray=load_from_ndarray)
+        data_ = self.test_pipeline(data_)
 
         data_['inputs'] = [data_['inputs']]
         data_['data_samples'] = [data_['data_samples']]
