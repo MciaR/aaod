@@ -152,5 +152,77 @@
 # plt.tight_layout()
 # plt.show()
 
-a = 0.005
-print(str(a))
+# ================= heatmap convert uni-space ================
+import torch
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
+
+a = torch.randint(0, 256, (64, 64)).cpu().detach().numpy()
+b = torch.randint(50, 101, (64, 64)).cpu().detach().numpy()
+
+def map2uni_space(target: np.ndarray, src: np.ndarray):
+    H, W = src.shape
+    target_min = np.min(target)
+    target_max = np.max(target)
+
+    src_min_idx = np.argmin(src.flatten())
+    src_min_x, src_min_y = src_min_idx // W, src_min_idx % W
+    src_max_idx = np.argmax(src.flatten())
+    src_max_x, src_max_y = src_max_idx // W, src_max_idx % W
+
+    output = src.copy()
+    # print(output[src_min_x, src_min_y] == np.min(src))
+    output[src_min_x, src_min_y] = target_min
+    output[src_max_x, src_max_y] = target_max
+
+    return output
+
+def cvt_feat2heat(
+        feat_map: torch.Tensor,
+        alpha = 0.5,
+        img = None,
+        grey = False,
+        ):
+    
+    if isinstance(feat_map, torch.Tensor):
+        feat_map = feat_map.cpu().detach().numpy()
+
+    norm_img = np.zeros(feat_map.shape)
+    norm_img = cv2.normalize(feat_map, norm_img, 0, 255, cv2.NORM_MINMAX)
+    norm_img = np.asarray(norm_img, dtype=np.uint8)
+    if grey:
+        heat_img = np.stack((norm_img,) * 3, -1)
+    else:
+        heat_img = cv2.applyColorMap(norm_img, cv2.COLORMAP_JET)
+        heat_img = cv2.cvtColor(heat_img, cv2.COLOR_BGR2RGB)
+    if img is not None:
+        heat_img = cv2.addWeighted(img, 1 - alpha, heat_img, alpha, 0)
+    return heat_img
+
+row, col = (2, 2)
+plt.figure(frameon=False, figsize=(12, 3), dpi=300)
+plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+
+idx = 1
+ori_feat_list = [a, b]
+for i in range(col):
+    _featmap = ori_feat_list[i]
+    plt.subplot(row, col, idx)
+    plt.imshow(cvt_feat2heat(_featmap))
+    plt.title(f"ori heatmap {i}", fontsize=10)
+    idx += 1
+
+uni_feat_list = [a, map2uni_space(a, b)]
+for i in range(col):
+    _featmap = uni_feat_list[i]
+    plt.subplot(row, col, idx)
+    plt.imshow(cvt_feat2heat(_featmap))
+    plt.title(f"uni heatmap {i}", fontsize=10)
+    idx += 1
+
+plt.tight_layout()
+plt.show()

@@ -28,7 +28,7 @@ if __name__ == '__main__':
         'p': 2,
         'alpha': 2,
         'lr': 0.05,
-        'M': 10,
+        'M': 300,
         'adv_type': 'direct', 
         # 'adv_type': 'residual',
         # 'constrain': 'distance'
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     # field which will be saved in result name.
     remain_list = ['feature_type', 'channel_mean', 'stage', 'alpha', 'lr', 'M', 'adv_type', 'constrain']
     # decide folder which result will be saved.
-    exp_name = 'reduce_std_by_each_channel/dataset_top200'
+    exp_name = 'reduce_std_by_each_channel/dataset_top200_absolute'
 
     attacker = HAFAttack(**attack_params) 
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)

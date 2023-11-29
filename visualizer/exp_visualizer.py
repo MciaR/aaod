@@ -298,22 +298,8 @@ class ExpVisualizer():
             plt.imshow(image_list[i])  
             ind += 1
 
-        # ====== Second row: ori backbone ======
+        # clean backbone featmap
         ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
-        for i in range(col):
-            if i < len(ori_backbone_feat):
-                plt.subplot(row, col, ind)
-                plt.xticks([],[])
-                plt.yticks([],[])
-                if i == 0:
-                    plt.ylabel(f"ori {feature_type}")
-                _feature = ori_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey)
-                plt.title(f"stage {i}", fontsize=10)
-                plt.imshow(feature_map)
-            ind += 1
-
-        # ====== Third row: gt backbone ======
         # target featmap
         gt_backbone_feat = []
         for i in range(len(ori_backbone_feat)):
@@ -324,7 +310,24 @@ class ExpVisualizer():
             else:
                 _gt_feat = ori_backbone_feat[i]
             gt_backbone_feat.append(_gt_feat)
+        # adv backbone featmap
+        adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
 
+        # ====== Second row: ori backbone ======
+        for i in range(col):
+            if i < len(ori_backbone_feat):
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                if i == 0:
+                    plt.ylabel(f"ori {feature_type}")
+                _feature = ori_backbone_feat[i].squeeze(0)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=None)
+                plt.title(f"stage {i}", fontsize=10)
+                plt.imshow(feature_map)
+            ind += 1
+
+        # ====== Third row: gt backbone ======
         for i in range(col):
             if i < len(gt_backbone_feat):
                 plt.subplot(row, col, ind)
@@ -333,13 +336,13 @@ class ExpVisualizer():
                 if i == 0:
                     plt.ylabel(f"adv gt {feature_type}")
                 _feature = gt_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey)
+                _norm_target = ori_backbone_feat[i].squeeze(0)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
                 plt.title(f"stage {i}", fontsize=10)
                 plt.imshow(feature_map)
             ind += 1
 
         # ===== Fourth row: adv backbone =====
-        adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
         for i in range(col):
             if i < len(adv_backbone_feat):
                 plt.subplot(row, col, ind)
@@ -348,7 +351,8 @@ class ExpVisualizer():
                 if i == 0:
                     plt.ylabel(f"adv {feature_type}")
                 _feature = adv_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey)
+                _norm_target = ori_backbone_feat[i].squeeze(0)
+                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
                 plt.title(f"stage {i}", fontsize=10)
                 plt.imshow(feature_map)
             ind += 1  
