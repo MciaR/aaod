@@ -373,7 +373,7 @@ class ExpVisualizer():
                 data_sample=pred_res,
                 pred_score_thr=0)
             _feature = adv_backbone_feat[i].squeeze(0)
-            adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.35)
+            adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5)
             plt.title(f"adv Fpn {i} pred", fontsize=10)
             plt.imshow(adv_heatmap_pred)
             ind += 1
