@@ -38,7 +38,7 @@ if __name__ == '__main__':
     # field which will be saved in result name.
     remain_list = ['feature_type', 'channel_mean', 'stage', 'alpha', 'lr', 'M', 'adv_type', 'constrain']
     # decide folder which result will be saved.
-    exp_name = 'reduce_std_by_each_channel/dataset_top200_absolute'
+    exp_name = 'reduce_std_by_each_channel/dataset_top100_absolute_showpred'
 
     attacker = HAFAttack(**attack_params) 
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)
@@ -50,6 +50,6 @@ if __name__ == '__main__':
 
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
     # vis.show_stage_results(data_sample=dataset[60]['data_samples'], save=True, grey=True, show_thr=0.3)
-    for i in range(200):
+    for i in range(100):
         vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], save=True, feature_grey=False, attack_params=attack_params, remain_list=remain_list, exp_name=exp_name)
     # vis.show_stage_results(img='ad_result/base_attack/000000397133.jpg', save=False, grey=True, show_thr=0.1)
