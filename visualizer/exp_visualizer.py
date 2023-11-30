@@ -243,7 +243,7 @@ class ExpVisualizer():
             channel_mean = attack_params['channel_mean']
     
         row, col = (6, 5)
-        plt.figure(frameon=False, figsize=(12, 12), dpi=300)
+        plt.figure(frameon=False, figsize=(18, 15), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         # ====== ori_image & noise & adv_image & pred results =======
@@ -343,7 +343,6 @@ class ExpVisualizer():
             ind += 1
 
         # ===== Fourth row: adv backbone =====
-        adv_show_heatmap = []
         for i in range(col):
             if i < len(adv_backbone_feat):
                 plt.subplot(row, col, ind)
@@ -356,7 +355,6 @@ class ExpVisualizer():
                 feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
                 plt.title(f"stage {i}", fontsize=10)
                 plt.imshow(feature_map)
-                adv_show_heatmap.append(feature_map)
             ind += 1  
 
         # for fr
@@ -375,9 +373,9 @@ class ExpVisualizer():
                 data_sample=pred_res,
                 pred_score_thr=0)
             _feature = ori_backbone_feat[i].squeeze(0)
-            adv_heatmap_pred = self.visualizer.draw_featmap(_feature, clean_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.4)
+            clean_heatmap_pred = self.visualizer.draw_featmap(_feature, clean_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5)
             plt.title(f"clean Fpn {i} pred", fontsize=10)
-            plt.imshow(adv_heatmap_pred)
+            plt.imshow(clean_heatmap_pred)
             ind += 1
 
         # ====== row 6: each level pred results adv ======            
@@ -394,8 +392,9 @@ class ExpVisualizer():
                 draw_gt=False,
                 data_sample=pred_res,
                 pred_score_thr=0)
-            _feature = adv_show_heatmap[i]
-            adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.4)
+            _feature = adv_backbone_feat[i].squeeze(0)
+            _norm_target = ori_backbone_feat[i].squeeze(0)
+            adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5, normalize_target=_norm_target)
             plt.title(f"adv Fpn {i} pred", fontsize=10)
             plt.imshow(adv_heatmap_pred)
             ind += 1
