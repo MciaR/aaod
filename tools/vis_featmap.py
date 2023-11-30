@@ -50,6 +50,6 @@ if __name__ == '__main__':
 
     # vis.show_single_pic_feats(img=img, show_layer=3, top_k=top_k, pic_overlay=pic_overlay)
     # vis.show_stage_results(data_sample=dataset[60]['data_samples'], save=True, grey=True, show_thr=0.3)
-    for i in range(100):
+    for i in range(44):
         vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], save=True, feature_grey=False, attack_params=attack_params, remain_list=remain_list, exp_name=exp_name)
     # vis.show_stage_results(img='ad_result/base_attack/000000397133.jpg', save=False, grey=True, show_thr=0.1)
