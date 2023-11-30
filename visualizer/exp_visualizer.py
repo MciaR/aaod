@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import math
 import os
 
 from attack import BaseAttack
@@ -53,22 +54,20 @@ class ExpVisualizer():
 
         return file_name
 
-    def show_single_pic_feats(self, img, show_layer=0, top_k = 100, pic_overlay=False):
+    def show_single_pic_feats(self, img, feature_type='backbone', show_stage=0, top_k = 100, pic_overlay=False):
         """Show `top_k` channels of featuremap of a pic."""
 
-        feat = self.runner._forward(self.model.backbone, img=img)
+        feat = self.runner._forward(feature_type=feature_type, img=img)
 
         image = Image.open(img)
         _image = np.array(image)
-        _feature = feat[show_layer].squeeze()
-        _resize_shape = (_image.shape[0], _image.shape[1])
+        _feature = feat[show_stage].squeeze(0)
 
         # just show original feature map
         if not pic_overlay:
             _image = None
-            _resize_shape = None
 
-        heatmap = self.visualizer.draw_featmap(_feature, _image, channel_reduction=None, arrangement=(10, 10), topk=top_k, with_text=False, alpha=0.5, resize_shape=_resize_shape)
+        heatmap = self.visualizer.draw_featmap(_feature, _image, channel_reduction=None, arrangement=(10, 10), topk=top_k, alpha=0.5)
         self.visualizer.show(img=heatmap)
 
     def show_stage_results(
@@ -202,12 +201,50 @@ class ExpVisualizer():
             plt.savefig('records/pics/featmap/{}_{}.png'.format(self.get_timestamp(), img_name))
         plt.show()
 
+    def save_heatmap_channel(
+        self,
+        features,
+        preds,
+        topk,
+        save_dir,
+        save_name,
+        normalize_features=None,
+        grey=False,
+        alpha=0.5,
+        ):
+        """Save topk heatmap channels of each image.
+        Args:
+            features (torch.Tensor): features of this image.
+            preds (np.ndarray): predict results respect to each stage of features (it's a image which can be show or save directly).
+            topk (int): amount of channel you want to show.
+            save_dir (str): save directory.
+            save_name (str): file basename you save.
+            normalize_features (torch.Tensor): map features to target tensor value space.
+            grey (bool): save grey heatmap or colorful.
+            aphla (float): features' capacity.
+        """
+        edge_len = math.sqrt(topk)
+        if edge_len - int(edge_len) != 0.0:
+            edge_len += 1
+        edge_len = int(edge_len)
+
+        for i in range(len(features)):
+            stage_feat = features[i].squeeze(0)
+            stage_pred = preds[i]
+            normalize_target = normalize_features[i].squeeze(0) if normalize_features is not None else None
+            # TODO: 目前normalize_features是没用的
+            topk_heat_channel = self.visualizer.draw_featmap(stage_feat, stage_pred, channel_reduction=None, topk=topk, arrangement=(edge_len, edge_len), grey=grey, alpha=alpha, normalize_target=normalize_target)
+            heatmaps = Image.fromarray(topk_heat_channel)
+            heatmaps.save(f'{save_dir}/{save_name}-stage{i}.png')
+
     def show_attack_results(
             self, 
             model_name,
+            dataset_idx=None,
             img=None,
             data_sample=None,
             save=False,
+            save_topk_heatmap=False,
             feature_grey=True,
             attack_params=None,
             remain_list=['lr', 'M'],
@@ -217,8 +254,10 @@ class ExpVisualizer():
         Args:
             img (str): path of img.
             model_name (str): name of infer model.
+            dataset_idx (int): index of dataset.
             data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
             save (bool): whether save pic. if it is True, pic will not be shown when running.
+            save_topk_heatmap (bool): whether save topk heatmap.
             feature_grey (bool): whether show grey feature map or heatmap.
             attack_params (dict): attacker parameters.
             remain_list (list): decide which field will be saved in result file name.
@@ -358,7 +397,8 @@ class ExpVisualizer():
             ind += 1  
 
         # for fr
-        # ====== row 5: each level pred results of clean ======            
+        # ====== row 5: each level pred results of clean ======      
+        clean_stage_preds = []      
         for i in range(col):
             plt.subplot(row, col, ind)
             plt.xticks([],[])
@@ -372,13 +412,15 @@ class ExpVisualizer():
                 draw_gt=False,
                 data_sample=pred_res,
                 pred_score_thr=0)
+            clean_stage_preds.append(clean_neck_pred)
             _feature = ori_backbone_feat[i].squeeze(0)
             clean_heatmap_pred = self.visualizer.draw_featmap(_feature, clean_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5)
             plt.title(f"clean Fpn {i} pred", fontsize=10)
             plt.imshow(clean_heatmap_pred)
             ind += 1
 
-        # ====== row 6: each level pred results adv ======            
+        # ====== row 6: each level pred results adv ======      
+        adv_stage_preds = []      
         for i in range(col):
             plt.subplot(row, col, ind)
             plt.xticks([],[])
@@ -392,6 +434,7 @@ class ExpVisualizer():
                 draw_gt=False,
                 data_sample=pred_res,
                 pred_score_thr=0)
+            adv_stage_preds.append(adv_neck_pred)
             _feature = adv_backbone_feat[i].squeeze(0)
             _norm_target = ori_backbone_feat[i].squeeze(0)
             adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5, normalize_target=_norm_target)
@@ -401,14 +444,22 @@ class ExpVisualizer():
 
         plt.tight_layout()
 
-
         if save:
-            save_dir = f'records/attack_result/{exp_name}'
+            img_name = os.path.basename(img_path).split('.')[0]
+            params_str = self.cvt_params2savename(attack_params, remain_list)
+
+            save_dir = f'records/attack_result/{exp_name}/{params_str}'
+            if save_topk_heatmap:
+                save_dir += f'/{img_name}'
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
 
-            img_name = os.path.basename(img_path).split('.')[0]
-            params_str = self.cvt_params2savename(attack_params, remain_list)
-            plt.savefig(f'{save_dir}/{params_str}-{img_name}-{self.get_timestamp()}.png')
+            img_idx = img_name if dataset_idx is None else dataset_idx
+
+            plt.savefig(f'{save_dir}/{img_idx}-{self.get_timestamp()}.png')
+            if save_topk_heatmap:
+                self.save_heatmap_channel(ori_backbone_feat, clean_stage_preds, topk=100, save_dir=save_dir, save_name='clean', normalize_features=None, grey=feature_grey, alpha=0.5)
+                self.save_heatmap_channel(adv_backbone_feat, adv_stage_preds, topk=100, save_dir=save_dir, save_name='adv', normalize_features=ori_backbone_feat, grey=feature_grey, alpha=0.5)
+
         else:
             plt.show()

@@ -7,6 +7,7 @@ import mmcv
 
 from attack import BaseAttack
 from PIL import Image
+from torch.optim.lr_scheduler import StepLR
 
 class HAFAttack(BaseAttack):
     """High Activation Featuremap Attack."""
@@ -45,23 +46,37 @@ class HAFAttack(BaseAttack):
         indices = torch.stack((h_indices, w_indices), dim=1)
 
         return values, indices
+
+    @staticmethod
+    def scale_map_function(x: torch.Tensor):
+        """Get scale factor by each element in x.
+        Args:
+            x (torch.Tensor): must be (C, )
+        Returns:
+            scales (torch.Tensor): scale factor respect to each element of x.
+        """
+        mean_val = torch.mean(x)
+        return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
     
     def modify_featmap(
         self,
-        featmap: torch.Tensor    
+        featmap: torch.Tensor,
+        global_scale = 1.1    
     ):
         """Modify activation of featmap to mean."""
     
         N, C, H, W = featmap.shape
         modify_feat = torch.ones(N, C, H, W, device=self.device)
+
         for sample_ind in range(N):
             sample_featmap = featmap[sample_ind]
             # (C, H*W)
             sample_featmap = sample_featmap.reshape(C, -1)
             # (C,)
             channel_mean = torch.mean(sample_featmap, dim=-1)
+            channel_scale = self.scale_map_function(channel_mean)
             for c in range(C):
-                modify_feat[sample_ind][c, :, :] = modify_feat[sample_ind][c, :, :] * channel_mean[c]
+                modify_feat[sample_ind][c, :, :] = modify_feat[sample_ind][c, :, :] * channel_mean[c] * global_scale * channel_scale[c]
 
         return modify_feat
 
@@ -117,6 +132,8 @@ class HAFAttack(BaseAttack):
 
         # (c, h, w) to (h, w, c)
         ori_pic = ori_pic.permute(1, 2, 0)
+        # cut overflow values
+        ori_pic = torch.clamp(ori_pic, 0, 255)
 
         ori_pic = ori_pic.detach().cpu().numpy()
 
@@ -272,6 +289,9 @@ class HAFAttack(BaseAttack):
         # params
         step = 0
         optimizer = torch.optim.Adam(params=[r], lr=lr)
+        scheduler = StepLR(optimizer,
+                               gamma = 0.1, # The number we multiply learning rate until the milestone. 
+                               step_size = M * 0.8)
         loss_pertub = torch.nn.BCELoss() if constrain == 'consine_sim' else torch.nn.MSELoss()
         loss_distance = torch.nn.MSELoss()
 
@@ -314,11 +334,12 @@ class HAFAttack(BaseAttack):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             step += 1
 
             if step % 10 == 0:
-                print("Train step [{}/{}], loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, loss, l1, l2))
+                print("Train step [{}/{}], lr: {:3f}, loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, M, optimizer.param_groups[0]["lr"] , loss, l1, l2))
 
         print("Generate adv compeleted!")
 
