@@ -1,5 +1,5 @@
 from visualizer import ExpVisualizer
-from attack import HAFAttack
+from attack import *
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # decide folder which result will be saved.
     exp_name = 'reduce_std_by_each_channel/channel_wise_result'
 
-    attacker = HAFAttack(**attack_params) 
+    attacker = FMRAttack(**attack_params) 
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)
     dataset = vis.dataset
 
