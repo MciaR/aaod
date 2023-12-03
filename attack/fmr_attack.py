@@ -9,6 +9,7 @@ from attack import BaseAttack
 from PIL import Image
 from torch.optim.lr_scheduler import StepLR
 
+
 class FMRAttack(BaseAttack):
     """Feature Mean Regression Attack.
     Args:         

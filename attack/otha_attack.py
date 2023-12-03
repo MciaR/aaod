@@ -7,6 +7,7 @@ from attack import BaseAttack
 from PIL import Image
 from torch.optim.lr_scheduler import StepLR
 
+
 class OTHAAttack(BaseAttack):
     """Object-wise Top-k High Activation Attack.
     Args:         

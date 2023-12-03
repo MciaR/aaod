@@ -9,6 +9,8 @@ from attack import BaseAttack
 from PIL import Image
 from torch.optim.lr_scheduler import StepLR
 
+
+# TODO: need moidify code correctly, now just copy from FMR Attack.
 class THAAttack(BaseAttack):
     """Top-k High Activation Attack.
     Args:         
