@@ -9,8 +9,8 @@ from attack import BaseAttack
 from PIL import Image
 from torch.optim.lr_scheduler import StepLR
 
-class HAFAttack(BaseAttack):
-    """High Activation Featuremap Attack.
+class THAAttack(BaseAttack):
+    """Top-k High Activation Attack.
     Args:         
         eplison (float): niose strength.    
         p (int): default `2`, p-norm to calculate distance between clean and adv image.
@@ -25,8 +25,8 @@ class HAFAttack(BaseAttack):
             - `True`, calculate each point mean by channel-wise, the featmap shape is (B, H, W).
     """
     def __init__(self, 
-                 global_scale=1.1,
-                 use_channel_scale=True,
+                 modify_percent=0.7,
+                 scale_factor=0.01,
                  cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
                  ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
                  feature_type = 'backbone', # `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
@@ -40,7 +40,7 @@ class HAFAttack(BaseAttack):
                  constrain='consine_sim', #  - default `consine_sim`, that means use consine similarity to comput loss. `distance`, that means use distance function to comput loss.
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, 
-                         attack_params=dict(global_scale=global_scale, use_channel_scale=use_channel_scale, p=p, alpha=alpha, stages=stages, M=M, lr=lr, feature_type=feature_type, adv_type=adv_type, constrain=constrain, channel_mean=channel_mean))
+                         attack_params=dict(modify_percent=modify_percent, scale_factor=scale_factor, p=p, alpha=alpha, stages=stages, M=M, lr=lr, feature_type=feature_type, adv_type=adv_type, constrain=constrain, channel_mean=channel_mean))
 
     def get_topk_info(
             self,
@@ -61,43 +61,6 @@ class HAFAttack(BaseAttack):
 
         return values, indices
 
-    @staticmethod
-    def scale_map_function(x: torch.Tensor):
-        """Get scale factor by each element in x.
-        Args:
-            x (torch.Tensor): must be (C, )
-        Returns:
-            scales (torch.Tensor): scale factor respect to each element of x, it's in range [0.0, 2.0].
-        """
-        mean_val = torch.mean(x)
-        return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
-    
-    def modify_featmap(
-        self,
-        featmap: torch.Tensor,
-    ):
-        """Modify activation of featmap to mean.
-        Args:
-            featmap (torch.Tensor): feature map you want to modifiy.
-            global_scale (float): scale factor for each channel.
-            channel_scale (bool): if `True`, channels `x` will be multiplied by `scale_map_function(x)`
-        """
-    
-        N, C, H, W = featmap.shape
-        modify_feat = torch.ones(N, C, H, W, device=self.device)
-
-        for sample_ind in range(N):
-            sample_featmap = featmap[sample_ind]
-            # (C, H*W)
-            sample_featmap = sample_featmap.reshape(C, -1)
-            # (C,)
-            channel_mean = torch.mean(sample_featmap, dim=-1)
-            channel_scale = self.scale_map_function(channel_mean) if self.use_channel_scale else torch.ones_like(channel_mean)
-            for c in range(C):
-                modify_feat[sample_ind][c, :, :] = modify_feat[sample_ind][c, :, :] * channel_mean[c] * self.global_scale * channel_scale[c]
-
-        return modify_feat
-
     def get_target_feature(
         self,
         img,
@@ -116,35 +79,34 @@ class HAFAttack(BaseAttack):
 
         return target_features
 
-    # def modify_featmap(
-    #         self,
-    #         featmap: torch.Tensor,
-    #         modify_percent: float = 0.7,
-    #         scale_factor: float = 0.01):
-    #     """Modify topk value in each featmap (H, W).
-    #     Args:
-    #         featmap (torch.Tensor): shape `(N, C, H, W)`
-    #         mean_featmap
-    #         scale_factor (float): miniumize factor
-    #     """
-    #     N, C, H, W = featmap.shape
-    #     modified_feat = None
-    #     for sample_ind in range(N):
-    #         sample_featmap = featmap[sample_ind]
-    #         k = int(H * W * modify_percent)
-    #         mean_featmap = torch.mean(sample_featmap, dim=0)
-    #         _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
+    def modify_featmap(
+            self,
+            featmap: torch.Tensor
+            ):
+        """Modify topk value in each featmap (H, W).
+        Args:
+            featmap (torch.Tensor): shape `(N, C, H, W)`
+            mean_featmap
+            scale_factor (float): miniumize factor
+        """
+        N, C, H, W = featmap.shape
+        modified_feat = None
+        for sample_ind in range(N):
+            sample_featmap = featmap[sample_ind]
+            k = int(H * W * self.modify_percent)
+            mean_featmap = torch.mean(sample_featmap, dim=0)
+            _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
 
-    #         # scale indices value in each featmap
-    #         # featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
-    #         mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] = mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
-    #         mean_featmap = mean_featmap.unsqueeze(0)
-    #         if modified_feat is None:
-    #             modified_feat = mean_featmap
-    #         else:
-    #             torch.stack((modified_feat, mean_featmap), dim=0)
+            # scale indices value in each featmap
+            # featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
+            mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] = mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] * self.scale_factor
+            mean_featmap = mean_featmap.unsqueeze(0)
+            if modified_feat is None:
+                modified_feat = mean_featmap
+            else:
+                torch.stack((modified_feat, mean_featmap), dim=0)
 
-    #     return modified_feat
+        return modified_feat
 
     def reverse_augment(self, x, datasample):
         """Reverse tensor to input image."""
