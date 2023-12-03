@@ -22,9 +22,11 @@ if __name__ == '__main__':
     attack_params = {
         'cfg_file': config_file,
         'ckpt_file': checkpoint_file,
+        'global_scale': 1.1,
+        'use_channel_scale': True,
         'feature_type': 'neck',
         'channel_mean': False,
-        'stage': [4],
+        'stages': [4],
         'p': 2,
         'alpha': 5,
         'lr': 0.05,
@@ -36,7 +38,7 @@ if __name__ == '__main__':
     }
 
     # field which will be saved in result name.
-    remain_list = ['feature_type', 'channel_mean', 'stage', 'alpha', 'lr', 'M', 'adv_type', 'constrain']
+    remain_list = ['feature_type', 'channel_mean', 'stages', 'alpha', 'lr', 'M', 'adv_type', 'constrain', 'global_scale', 'use_channel_scale']
     # decide folder which result will be saved.
     exp_name = 'reduce_std_by_each_channel/channel_wise_result'
 
@@ -44,6 +46,6 @@ if __name__ == '__main__':
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)
     dataset = vis.dataset
 
-    for i in range(40):
-        vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, attack_params=attack_params, remain_list=remain_list, exp_name=exp_name)
+    for i in range(1):
+        vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, exp_name=exp_name)
 

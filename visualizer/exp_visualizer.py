@@ -36,7 +36,7 @@ class ExpVisualizer():
         for key in remain_list:
             value = params[key]
             if type(value) is float:
-                value = str(value).split('.')[-1]
+                value = str(value)
                 file_name += key + value
             elif type(value) is str:
                 file_name += value
@@ -246,7 +246,6 @@ class ExpVisualizer():
             save=False,
             save_topk_heatmap=False,
             feature_grey=True,
-            attack_params=None,
             remain_list=['lr', 'M'],
             exp_name='exp',
             show_thr=0.3):
@@ -274,12 +273,7 @@ class ExpVisualizer():
         else:
             img_path = data_sample.img_path
 
-        if attack_params is None:
-            feature_type = 'backbone' # feature_type (str): `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
-            channel_mean = False # channel_mean (bool): means use `C` (channel) to comput loss, the featmap shape is (B, C, H, W), that decide how to show featmap.
-        else:
-            feature_type = attack_params['feature_type']
-            channel_mean = attack_params['channel_mean']
+        feature_type = self.attacker.feature_type
     
         row, col = (6, 5)
         plt.figure(frameon=False, figsize=(18, 15), dpi=300)
@@ -340,15 +334,7 @@ class ExpVisualizer():
         # clean backbone featmap
         ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
         # target featmap
-        gt_backbone_feat = []
-        for i in range(len(ori_backbone_feat)):
-            if i in self.attacker.stage:
-                _gt_feat = self.attacker.modify_featmap(ori_backbone_feat[i]) # _gt_feat : (B, H, W) if `channel_mean` is True else (B, C, H, W)
-                if channel_mean:
-                    _gt_feat = _gt_feat.unsqueeze(1) # _gt_feat : (B, 1, H, W)
-            else:
-                _gt_feat = ori_backbone_feat[i]
-            gt_backbone_feat.append(_gt_feat)
+        gt_backbone_feat = self.attacker.get_target_feature(img=img_path)
         # adv backbone featmap
         adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
 
@@ -445,6 +431,7 @@ class ExpVisualizer():
         plt.tight_layout()
 
         if save:
+            attack_params = self.attacker.attack_params
             img_name = os.path.basename(img_path).split('.')[0]
             params_str = self.cvt_params2savename(attack_params, remain_list)
 

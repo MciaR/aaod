@@ -23,6 +23,13 @@ class BaseAttack():
         self.data_preprocessor = self.get_data_preprocess()
         self.test_pipeline = self.get_test_pipeline()
         self.attack_params = dict(**attack_params)
+        self.init_attack_params()
+
+    def init_attack_params(self):
+        assert self.attack_params is not None
+
+        for key, value in self.attack_params.items():
+            setattr(self, key, value)
 
     def get_model(self, cfg_file, ckpt_path):
         model = init_detector(cfg_file, ckpt_path, device=self.device)
@@ -61,7 +68,9 @@ class BaseAttack():
             adv_path (str):  if `save=True` it will return path of adversarial sample, otherwise return np.ndarray of adv sample.
         """
         # get adversarial samples, kwargs must be implemented.
-        pertub, adv = self.generate_adv_samples(x=img, **self.attack_params)
+        # NOTE: old version code
+        # pertub, adv = self.generate_adv_samples(x=img, **self.attack_params)
+        pertub, adv = self.generate_adv_samples(x=img)
         # forward detector to get pred results.
         result = self.get_pred(img=adv)
 
@@ -103,7 +112,6 @@ class BaseAttack():
             # TODO: remove img_id.
             data_ = dict(img_path=img, img_id=0)
         # build the data pipeline
-        # test_pipeline = self.get_test_pipeline(load_from_ndarray=load_from_ndarray)
         data_ = self.test_pipeline(data_)
 
         data_['inputs'] = [data_['inputs']]
@@ -113,7 +121,7 @@ class BaseAttack():
 
         return data
     
-    def _forward(self, feature_type, img):
+    def _forward(self, img, feature_type=None):
         """ Get model output.
         
         Args:
@@ -145,6 +153,7 @@ class BaseAttack():
         result = inference_detector(self.model, img)
         return result
     
+    # NOTE: **kwargs在新版代码中可以不用，依然采用这种方式只是作为示例
     def generate_adv_samples(self, x, **kwargs):
         """Attack method to generate adversarial image.
         Args:
@@ -154,4 +163,11 @@ class BaseAttack():
             noise (np.ndarray | torch.Tensor): niose which add to clean image.
             adv (np.ndarray | torch.Tensor): adversarial image.
         """
+        pass
+    
+    def get_target_feature(
+        self,
+        ori_features,
+        ):
+        """Get target features for visualizer."""
         pass
