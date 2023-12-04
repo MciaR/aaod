@@ -2,6 +2,7 @@ from visualizer import ExpVisualizer
 from attack import *
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 def parse_args():
     pass
@@ -46,6 +47,7 @@ if __name__ == '__main__':
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)
     dataset = vis.dataset
 
-    for i in range(1):
+    # TODO: when idx == 9, there is a error.
+    for i in range(9, 44):
         vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, exp_name=exp_name)
 

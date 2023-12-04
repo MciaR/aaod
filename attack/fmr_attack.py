@@ -117,36 +117,6 @@ class FMRAttack(BaseAttack):
 
         return target_features
 
-    # def modify_featmap(
-    #         self,
-    #         featmap: torch.Tensor,
-    #         modify_percent: float = 0.7,
-    #         scale_factor: float = 0.01):
-    #     """Modify topk value in each featmap (H, W).
-    #     Args:
-    #         featmap (torch.Tensor): shape `(N, C, H, W)`
-    #         mean_featmap
-    #         scale_factor (float): miniumize factor
-    #     """
-    #     N, C, H, W = featmap.shape
-    #     modified_feat = None
-    #     for sample_ind in range(N):
-    #         sample_featmap = featmap[sample_ind]
-    #         k = int(H * W * modify_percent)
-    #         mean_featmap = torch.mean(sample_featmap, dim=0)
-    #         _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
-
-    #         # scale indices value in each featmap
-    #         # featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
-    #         mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] = mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
-    #         mean_featmap = mean_featmap.unsqueeze(0)
-    #         if modified_feat is None:
-    #             modified_feat = mean_featmap
-    #         else:
-    #             torch.stack((modified_feat, mean_featmap), dim=0)
-
-    #     return modified_feat
-
     def reverse_augment(self, x, datasample):
         """Reverse tensor to input image."""
         ori_shape = datasample.ori_shape
