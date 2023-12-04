@@ -35,7 +35,8 @@ if __name__ == '__main__':
         'adv_type': 'direct', 
         # 'adv_type': 'residual',
         # 'constrain': 'distance'
-        'constrain': 'consine_sim'
+        # 'constrain': 'consine_sim'
+        'constrain': 'combine'
     }
 
     # field which will be saved in result name.
@@ -48,6 +49,6 @@ if __name__ == '__main__':
     dataset = vis.dataset
 
     # TODO: when idx == 9, there is a error.
-    for i in range(9, 44):
+    for i in range(1):
         vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, exp_name=exp_name)
 

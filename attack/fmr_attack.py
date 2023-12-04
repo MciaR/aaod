@@ -7,7 +7,7 @@ import mmcv
 
 from attack import BaseAttack
 from PIL import Image
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, MultiStepLR
 
 
 class FMRAttack(BaseAttack):
@@ -230,8 +230,9 @@ class FMRAttack(BaseAttack):
         scheduler = StepLR(optimizer,
                                gamma = 0.1, # The number we multiply learning rate until the milestone. 
                                step_size = self.M * 0.8)
-        loss_pertub = torch.nn.BCELoss() if self.constrain == 'consine_sim' else torch.nn.MSELoss()
-        loss_distance = torch.nn.MSELoss()
+        
+        sim_metric = torch.nn.BCELoss() # combined with consine_similarity, suitable for direction and value.
+        dis_metric = torch.nn.MSELoss() # cal loss directly, suitable for value.
 
         while step < self.M:
             # calculate output featmap
@@ -244,29 +245,29 @@ class FMRAttack(BaseAttack):
             
             for p_fm, gt_fm in zip(pertub_featmap, attack_gt_featmap):
                 if self.channel_mean:
-                    # gt_fm : (B, H, W), p_fm: (B, C, H, W)
-                    if self.onstrain == 'consine_sim':
-                        p_fm_vector = p_fm.mean(dim=1).view(gt_fm.shape[0], -1) # (B, H*W)
-                        gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1) # (B, H*W)
-                        cosine_similarity = F.cosine_similarity(p_fm_vector, gt_fm_vector).unsqueeze(-1)
+                    p_fm = p_fm.mean(dim=1) # compress (B, C, H, W) to (B, H, W)
 
-                        labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
-                        l1 += (1 / len(self.stages)) * loss_pertub(cosine_similarity, labels)
-                    else:
-                        l1 += (1 / len(self.stages) * loss_pertub(p_fm.mean(dim=1), gt_fm)) 
-                else:
-                    # gt_fm: (B, C, H, W), p_fm: (B, C, H, W)
-                    if self.constrain == 'consine_sim':
-                        p_fm_vector = p_fm.view(gt_fm.shape[0], -1) # (B, C*H*W)
-                        gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1) # (B, C*H*W)
-                        cosine_similarity = F.cosine_similarity(p_fm_vector, gt_fm_vector).unsqueeze(-1)
+                # calculate consine_similarity
+                p_fm_vector = p_fm.view(gt_fm.shape[0], -1) # (B, H*W) if self.channel_mean else (B, C*H*W)
+                gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1)
+                labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
+                cosine_similarity = (F.cosine_similarity(p_fm_vector, gt_fm_vector) + 1. / 2.).unsqueeze(-1) # map consie_similarity to [0, 1]
+                sim_loss = sim_metric(cosine_similarity, labels)
 
-                        labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
-                        l1 += (1 / len(self.stages)) * loss_pertub(cosine_similarity, labels)
-                    else:
-                        l1 += (1 / len(self.stages)) * loss_pertub(p_fm, gt_fm)
+                # calculate distance
+                dis_loss = dis_metric(p_fm, gt_fm)
 
-            l2 = loss_distance(r, clean_image)
+                # decide loss format
+                if self.constrain == 'consine_sim':
+                    pertub_loss = sim_loss
+                elif self.constrain == 'distance':
+                    pertub_loss = dis_loss
+                elif self.constrain == 'combine':
+                    pertub_loss = sim_loss + dis_loss
+
+                l1 += (1 / len(self.stages)) * pertub_loss
+
+            l2 = dis_metric(r, clean_image)
             loss = l1 + self.alpha * l2
 
             optimizer.zero_grad()

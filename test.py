@@ -227,18 +227,20 @@
 # plt.tight_layout()
 # plt.show()
 
-import torch
+# import torch
 
 
-def F(x):
-    mean_val = torch.mean(x)
-    print(mean_val)
-    return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
+# def F(x):
+#     mean_val = torch.mean(x)
+#     print(mean_val)
+#     return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
 
-featmap = torch.rand(8)
-print(featmap)
-scale = F(featmap)
-print(scale)
+# featmap = torch.rand(8)
+# print(featmap)
+# scale = F(featmap)
+# print(scale)
 
-print(featmap * scale)
+# print(featmap * scale)
+
+
 
