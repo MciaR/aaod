@@ -1,14 +1,16 @@
 import cv2
 import mmcv
+import os
 from mmcv.transforms import Compose
 from mmengine.utils import track_iter_progress
 from mmdet.registry import VISUALIZERS
 from mmdet.apis import init_detector, inference_detector
 
+os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
 
 # 指定模型的配置文件和 checkpoint 文件路径
 config_file = 'configs/faster_rcnn_r101_fpn_coco.py'
-checkpoint_file = 'pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth'
+checkpoint_file = 'pretrained/fr_r101_coco_0394.pth'
 
 # 根据配置文件和 checkpoint 文件构建模型
 model = init_detector(config_file, checkpoint_file, device='cuda:0')
@@ -19,7 +21,7 @@ visualizer = VISUALIZERS.build(model.cfg.visualizer)
 visualizer.dataset_meta = model.dataset_meta
 
 # 测试单张图片并展示结果
-img = 'ad_result/dcn_attack/COCO_val2014_000000391895.jpg'  # 或者 img = mmcv.imread(img)，这样图片仅会被读一次
+img = 'records/attack_pics/FMRAttack/000000037777.jpg'  # 或者 img = mmcv.imread(img)，这样图片仅会被读一次
 result = inference_detector(model, img)
 
 # 显示结果
@@ -32,6 +34,7 @@ visualizer.add_datasample(
     img,
     data_sample=result,
     draw_gt=False,
-    show=True)
+    show=True,
+    pred_score_thr=0.3)
 
 visualizer.show()

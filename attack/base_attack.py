@@ -61,48 +61,42 @@ class BaseAttack():
         """Get attack name."""
         return type(self).__name__
     
-    def attack(self, img, save=False):
+    def attack(self, img):
         """Get inference results of model.
         Args:
             img (str): img path.
-            save (bool): whether save noise and adv.
         Return:
             result (torch.Tensor | np.ndarray): result of inference.
-            pertub_path (str): if `save=True`, it will return path of pertub noise, otherwise return np.ndarray of pertub noise.
-            adv_path (str):  if `save=True` it will return path of adversarial sample, otherwise return np.ndarray of adv sample.
+            pertub_path (str): return path of pertub noise.
+            adv_path (str):  return path of adversarial sample.
         """
         # get adversarial samples, kwargs must be implemented.
         # NOTE: old version code
         # pertub, adv = self.generate_adv_samples(x=img, **self.attack_params)
         pertub, adv = self.generate_adv_samples(x=img)
-        # forward detector to get pred results. if img is a np.ndarray, channel must be BGR
-        result = self.get_pred(img=adv.astype(np.uint8))
 
-        # transfer adv and tertub to RGB to save
-        adv = adv[..., [2, 1, 0]].astype(np.uint8)
-        pertub = pertub[..., [2, 1, 0]].astype(np.uint8)
+        attack_name = self.get_attack_name()
+        save_dir = 'records/attack_pics/' + attack_name
+        img_name = os.path.basename(img).split('.')[0] + '.jpg' # 和PNG的攻击效果没有本质区别
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        ad_img_path = os.path.join(save_dir, img_name)
+        pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name) 
 
-        if save:
-            attack_name = self.get_attack_name()
-            save_dir = 'records/attack_pics/' + attack_name
-            img_name = os.path.basename(img).split('.')[0] + '.jpg' # 和PNG的攻击效果没有本质区别
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-            ad_img_path = os.path.join(save_dir, img_name)
-            pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name) 
+        adv_image = Image.fromarray(adv.astype(np.uint8))
+        pertub_image = Image.fromarray(pertub.astype(np.uint8))
 
-            adv_image = Image.fromarray(adv)
-            pertub_image = Image.fromarray(pertub)
+        adv_image.save(ad_img_path)
+        pertub_image.save(pertub_img_path)
+        
+        assert os.path.exists(ad_img_path) and os.path.exists(pertub_img_path), \
+            f'`{ad_img_path}` or `{pertub_img_path}` does not save successfully!.'
+        
+        # forward detector to get pred results.
+        result = self.get_pred(img=ad_img_path)
 
-            adv_image.save(ad_img_path)
-            pertub_image.save(pertub_img_path)
-            
-            assert os.path.exists(ad_img_path) and os.path.exists(pertub_img_path), \
-                f'`{ad_img_path}` or `{pertub_img_path}` does not save successfully!.'
-            
-            return result, pertub_img_path, ad_img_path
-        else:
-            return result, pertub, adv
+        return result, pertub_img_path, ad_img_path
+
     
     def get_data_from_img(self, img):
         """Get preprocessed data from img path

@@ -131,8 +131,8 @@ class FMRAttack(BaseAttack):
         # revert normorlize
         ori_pic = x * std_t + mean_t
         # revert bgr_to_rgb
-        # dont need to revert bgr_to_rgb, beacuse saving format is RGB if using PIL.Image
-        ori_pic = ori_pic[[2, 1, 0], ...]
+        # NOTE: dont need to revert bgr_to_rgb, beacuse saving format is RGB if using PIL.Image
+        # ori_pic = ori_pic[[2, 1, 0], ...]
         # revert pad
         ori_pic = ori_pic[:, :datasample.img_shape[0], :datasample.img_shape[1]]
 
