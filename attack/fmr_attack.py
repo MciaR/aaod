@@ -132,7 +132,7 @@ class FMRAttack(BaseAttack):
         ori_pic = x * std_t + mean_t
         # revert bgr_to_rgb
         # dont need to revert bgr_to_rgb, beacuse saving format is RGB if using PIL.Image
-        # ori_pic = ori_pic[[2, 1, 0], ...]
+        ori_pic = ori_pic[[2, 1, 0], ...]
         # revert pad
         ori_pic = ori_pic[:, :datasample.img_shape[0], :datasample.img_shape[1]]
 
@@ -285,9 +285,6 @@ class FMRAttack(BaseAttack):
         # 这里用了squeeze实际上是只作为一张图片
         pertub_tensor = r.squeeze() - clean_image.squeeze()
         adv_tensor = r.squeeze()
-        if self.adv_type == 'residual':
-            pertub_tensor += clean_image.squeeze()
-            adv_tensor += clean_image.squeeze()
 
         pertub = self.reverse_augment(x=pertub_tensor, datasample=data['data_samples'][0])
         adv_image = self.reverse_augment(x=adv_tensor, datasample=data['data_samples'][0])

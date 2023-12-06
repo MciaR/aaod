@@ -57,6 +57,10 @@ class BaseAttack():
 
         return data_preprocessor   
     
+    def get_attack_name(self):
+        """Get attack name."""
+        return type(self).__name__
+    
     def attack(self, img, save=False):
         """Get inference results of model.
         Args:
@@ -71,20 +75,24 @@ class BaseAttack():
         # NOTE: old version code
         # pertub, adv = self.generate_adv_samples(x=img, **self.attack_params)
         pertub, adv = self.generate_adv_samples(x=img)
-        # forward detector to get pred results.
-        result = self.get_pred(img=adv)
+        # forward detector to get pred results. if img is a np.ndarray, channel must be BGR
+        result = self.get_pred(img=adv.astype(np.uint8))
+
+        # transfer adv and tertub to RGB to save
+        adv = adv[..., [2, 1, 0]].astype(np.uint8)
+        pertub = pertub[..., [2, 1, 0]].astype(np.uint8)
 
         if save:
-            attack_name = os.path.basename(__file__).split('.')[0]
-            save_dir = 'ad_result/' + attack_name
-            img_name = os.path.basename(img).split('.')[0] + '.png'
+            attack_name = self.get_attack_name()
+            save_dir = 'records/attack_pics/' + attack_name
+            img_name = os.path.basename(img).split('.')[0] + '.jpg' # 和PNG的攻击效果没有本质区别
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             ad_img_path = os.path.join(save_dir, img_name)
             pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name) 
 
-            adv_image = Image.fromarray(adv.astype(np.uint8))
-            pertub_image = Image.fromarray(pertub.astype(np.uint8))
+            adv_image = Image.fromarray(adv)
+            pertub_image = Image.fromarray(pertub)
 
             adv_image.save(ad_img_path)
             pertub_image.save(pertub_img_path)
@@ -94,7 +102,7 @@ class BaseAttack():
             
             return result, pertub_img_path, ad_img_path
         else:
-            return result, pertub.astype(np.uint8), adv.astype(np.uint8)
+            return result, pertub, adv
     
     def get_data_from_img(self, img):
         """Get preprocessed data from img path
