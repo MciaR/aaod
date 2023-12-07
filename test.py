@@ -56,25 +56,25 @@
 # norm = torch.norm(tensor, p=2)
 
 # print(norm.item())  # 输出: 5.4772257804870605
-from PIL import Image
-import numpy as np
-import cv2
+# from PIL import Image
+# import numpy as np
+# import cv2
 
-img_list = np.random.rand(640, 640, 3) * 255
-img_np = np.array(img_list).astype(np.uint8)
-img = Image.fromarray(img_np)
-img.save('test.png')
+# img_list = np.random.rand(640, 640, 3) * 255
+# img_np = np.array(img_list).astype(np.uint8)
+# img = Image.fromarray(img_np)
+# img.save('test.png')
 
-_img = Image.open('test.png')
-_img_np = np.array(_img)
+# _img = Image.open('test.png')
+# _img_np = np.array(_img)
 
-cv2.imwrite('test_cv2.png', img_np)
-cv_img_np = cv2.imread('test_cv2.png')
+# cv2.imwrite('test_cv2.png', img_np)
+# cv_img_np = cv2.imread('test_cv2.png')
 
-print(img_np)
-print(_img_np)
-print(img_np == _img_np) # if png, is TRUE, if jpg or jpeg, is FALSE, because of the compress
-print(img_np == cv_img_np)
+# print(img_np)
+# print(_img_np)
+# print(img_np == _img_np) # if png, is TRUE, if jpg or jpeg, is FALSE, because of the compress
+# print(img_np == cv_img_np)
 
 # ========================== heatmap test ==============================
 # import torch
@@ -246,6 +246,21 @@ print(img_np == cv_img_np)
 # print(scale)
 
 # print(featmap * scale)
+import os
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
+
+C = 2048
+channel_value = torch.rand(1, C)
+np_channel_value = channel_value.cpu().detach().numpy()
+x = np.linspace(1, C, C)
+
+plt.scatter(x, np_channel_value)
+plt.show()
 
 
 

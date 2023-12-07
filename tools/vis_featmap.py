@@ -27,7 +27,7 @@ if __name__ == '__main__':
         'use_channel_scale': True,
         'feature_type': 'neck',
         'channel_mean': False,
-        'stages': [4],
+        'stages': [0, 1, 2, 3, 4],
         'p': 2,
         'alpha': 5,
         'lr': 0.05,
@@ -49,6 +49,6 @@ if __name__ == '__main__':
     dataset = vis.dataset
 
     # TODO: when idx == 9, there is a error.
-    for i in range(1,2):
+    for i in range(3):
         vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, exp_name=exp_name)
 

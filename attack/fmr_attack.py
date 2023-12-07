@@ -228,8 +228,8 @@ class FMRAttack(BaseAttack):
         step = 0
         optimizer = torch.optim.Adam(params=[r], lr=self.lr)
         scheduler = StepLR(optimizer,
-                               gamma = 0.1, # The number we multiply learning rate until the milestone. 
-                               step_size = self.M * 0.8)
+                               gamma = 0.3, # The number we multiply learning rate until the milestone. 
+                               step_size = self.M * 0.3)
         
         sim_metric = torch.nn.BCELoss() # combined with consine_similarity, suitable for direction and value.
         dis_metric = torch.nn.MSELoss() # cal loss directly, suitable for value.
