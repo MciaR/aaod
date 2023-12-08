@@ -436,7 +436,7 @@ class ExpVisualizer():
             img_name = os.path.basename(img_path).split('.')[0]
             params_str = self.cvt_params2savename(attack_params, remain_list)
 
-            save_dir = f'records/attack_result/{exp_name}/{params_str}'
+            save_dir = f'records/attack_result/{self.attacker.get_attack_name()}/{exp_name}/{params_str}'
             if save_topk_heatmap:
                 save_dir += f'/{img_name}'
             if not os.path.exists(save_dir):

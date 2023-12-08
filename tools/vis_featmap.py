@@ -42,13 +42,13 @@ if __name__ == '__main__':
     # field which will be saved in result name.
     remain_list = ['feature_type', 'channel_mean', 'stages', 'alpha', 'lr', 'M', 'adv_type', 'constrain', 'global_scale', 'use_channel_scale']
     # decide folder which result will be saved.
-    exp_name = 'reduce_std_by_each_channel/negative_one'
+    exp_name = '1208now'
 
     attacker = FMRAttack(**attack_params) 
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)
     dataset = vis.dataset
 
     # TODO: when idx == 9, there is a error.
-    for i in range(3):
+    for i in range(1, 2):
         vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, exp_name=exp_name)
 

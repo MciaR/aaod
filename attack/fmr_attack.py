@@ -70,9 +70,9 @@ class FMRAttack(BaseAttack):
         Returns:
             scales (torch.Tensor): scale factor respect to each element of x, it's in range [0.0, 2.0].
         """
-        # mean_val = torch.mean(x)
-        # return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
-        return -1. * torch.ones_like(x)
+        mean_val = torch.mean(x)
+        return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
+        # return -1. * torch.ones_like(x)
     
     def modify_featmap(
         self,
@@ -252,7 +252,7 @@ class FMRAttack(BaseAttack):
                 p_fm_vector = p_fm.view(gt_fm.shape[0], -1) # (B, H*W) if self.channel_mean else (B, C*H*W)
                 gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1)
                 labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
-                cosine_similarity = (F.cosine_similarity(p_fm_vector, gt_fm_vector) + 1. / 2.).unsqueeze(-1) # map consie_similarity to [0, 1]
+                cosine_similarity = ((F.cosine_similarity(p_fm_vector, gt_fm_vector) + 1.) / 2.).unsqueeze(-1) # map consie_similarity to [0, 1]
                 sim_loss = sim_metric(cosine_similarity, labels)
 
                 # calculate distance

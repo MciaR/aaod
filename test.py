@@ -262,11 +262,12 @@
 # plt.scatter(x, np_channel_value)
 # plt.show()
 
-import torch
-from torchvision.models import resnet50
+# import torch
+# from torchvision.models import resnet50
 
-model = resnet50()
-print(model)
+# model = resnet50()
+# print(model)
 
+print(1 + 2 / 3)
 
 
