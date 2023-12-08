@@ -27,12 +27,16 @@ class AnalysisVisualizer(AAVisualizer):
             data_sample=None,
             data_idx=None,
             feature_type='backbone',
+            attack_name=None,
+            exp_name=None,
             figure_name=None,):
         """Save channel wise mean activate value.
         Args:
             img (str): imaga path.
             data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
             data_idx (int): index of data_sample.
+            attack_name (str): attack method, default `None`.
+            exp_name (str): exp name, default `None`.
             feature_type (str): 'backbone' or 'neck'.
         """
         assert img or data_sample, \
@@ -72,9 +76,17 @@ class AnalysisVisualizer(AAVisualizer):
             plt.scatter(x, y, s=10)
 
         save_path = os.path.join(self.save_dir, 'activate_mean_by_channel')
+
+        if attack_name:
+            save_path = os.path.join(save_path, attack_name)
+        if exp_name:
+            save_path = os.path.join(save_path, exp_name)
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
-        plt.savefig(f'{save_path}/{data_idx}.jpg')
+        save_img_name = os.path.basename(img_path).split('.')[0]
+        if data_sample is not None:
+            save_img_name = str(data_idx) + '-' + save_img_name
+        plt.savefig(f'{save_path}/{save_img_name}.jpg')
 
 

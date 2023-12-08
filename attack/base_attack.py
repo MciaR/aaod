@@ -61,10 +61,11 @@ class BaseAttack():
         """Get attack name."""
         return type(self).__name__
     
-    def attack(self, img):
+    def attack(self, img, exp_name=None):
         """Get inference results of model.
         Args:
             img (str): img path.
+            exp_name (str): exp name.
         Return:
             result (torch.Tensor | np.ndarray): result of inference.
             pertub_path (str): return path of pertub noise.
@@ -77,11 +78,20 @@ class BaseAttack():
 
         attack_name = self.get_attack_name()
         save_dir = 'records/attack_pics/' + attack_name
+        if exp_name is not None:
+            save_dir = os.path.join(save_dir, exp_name)
+
+        adv_save_dir = os.path.join(save_dir, 'adv')
+        pertub_save_dir = os.path.join(save_dir, 'pertub')
         img_name = os.path.basename(img).split('.')[0] + '.jpg' # 和PNG的攻击效果没有本质区别
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        ad_img_path = os.path.join(save_dir, img_name)
-        pertub_img_path = os.path.join(save_dir, 'pertub_' + img_name) 
+
+        ad_img_path = os.path.join(adv_save_dir, img_name)
+        pertub_img_path = os.path.join(pertub_save_dir, img_name) 
+
+        if not os.path.exists(adv_save_dir):
+            os.makedirs(adv_save_dir)
+        if not os.path.exists(pertub_save_dir):
+            os.makedirs(pertub_save_dir)
 
         adv_image = Image.fromarray(adv.astype(np.uint8))
         pertub_image = Image.fromarray(pertub.astype(np.uint8))

@@ -246,21 +246,27 @@
 # print(scale)
 
 # print(featmap * scale)
-import os
+# import os
+# import torch
+# import numpy as np
+# import matplotlib.pyplot as plt
+
+
+# os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
+
+# C = 2048
+# channel_value = torch.rand(1, C)
+# np_channel_value = channel_value.cpu().detach().numpy()
+# x = np.linspace(1, C, C)
+
+# plt.scatter(x, np_channel_value)
+# plt.show()
+
 import torch
-import numpy as np
-import matplotlib.pyplot as plt
+from torchvision.models import resnet50
 
-
-os.environ['KMP_DUPLICATE_LIB_OK'] = "TRUE"
-
-C = 2048
-channel_value = torch.rand(1, C)
-np_channel_value = channel_value.cpu().detach().numpy()
-x = np.linspace(1, C, C)
-
-plt.scatter(x, np_channel_value)
-plt.show()
+model = resnet50()
+print(model)
 
 
 

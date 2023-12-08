@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # field which will be saved in result name.
     remain_list = ['feature_type', 'channel_mean', 'stages', 'alpha', 'lr', 'M', 'adv_type', 'constrain', 'global_scale', 'use_channel_scale']
     # decide folder which result will be saved.
-    exp_name = 'reduce_std_by_each_channel/1206'
+    exp_name = 'reduce_std_by_each_channel/negative_one'
 
     attacker = FMRAttack(**attack_params) 
     vis = ExpVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file, use_attack=True, attacker=attacker)

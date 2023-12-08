@@ -70,8 +70,9 @@ class FMRAttack(BaseAttack):
         Returns:
             scales (torch.Tensor): scale factor respect to each element of x, it's in range [0.0, 2.0].
         """
-        mean_val = torch.mean(x)
-        return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
+        # mean_val = torch.mean(x)
+        # return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
+        return -1. * torch.ones_like(x)
     
     def modify_featmap(
         self,

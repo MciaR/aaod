@@ -12,4 +12,5 @@ if __name__ == '__main__':
     analysiser = AnalysisVisualizer(cfg_file=config_file, ckpt_file=checkpoint_file)
     dataset = analysiser.get_dataset()
 
-    analysiser.save_activate_map_channel_wise(data_sample=dataset[0]['data_samples'], data_idx=0, feature_type='neck')
+    for i in range(9):
+        analysiser.save_activate_map_channel_wise(data_sample=dataset[i]['data_samples'], data_idx=i, feature_type='neck', exp_name='clean')

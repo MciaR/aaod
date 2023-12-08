@@ -5,7 +5,7 @@ import math
 import os
 
 from attack import BaseAttack
-from visualizer import AAVisualizer
+from visualizer import AnalysisVisualizer
 from PIL import Image
 
 
@@ -17,7 +17,8 @@ class ExpVisualizer():
     """
     def __init__(self, cfg_file, ckpt_file, use_attack=False, attacker=None):
         self.use_attack = use_attack 
-        self.visualizer = AAVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
+        self.analysiser = AnalysisVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
+        self.visualizer = self.analysiser
         self.runner = self.visualizer
         self.model = self.visualizer.model
         self.dataset = self.visualizer.get_dataset()
@@ -300,7 +301,7 @@ class ExpVisualizer():
             pred_score_thr=show_thr)
 
         # base_attack 里存了png
-        ad_result, pertub_img_path, ad_image_path = self.attacker.attack(img_path)
+        ad_result, pertub_img_path, ad_image_path = self.attacker.attack(img_path, exp_name=exp_name)
 
         ad_image = Image.open(ad_image_path)
         _ad_image = np.array(ad_image)
@@ -447,6 +448,8 @@ class ExpVisualizer():
             if save_topk_heatmap:
                 self.save_heatmap_channel(ori_backbone_feat, clean_stage_preds, topk=100, save_dir=save_dir, save_name='clean', normalize_features=None, grey=feature_grey, alpha=0.5)
                 self.save_heatmap_channel(adv_backbone_feat, adv_stage_preds, topk=100, save_dir=save_dir, save_name='adv', normalize_features=ori_backbone_feat, grey=feature_grey, alpha=0.5)
+
+            self.analysiser.save_activate_map_channel_wise(img=ad_image_path, feature_type=feature_type, attack_name=self.attacker.get_attack_name(), exp_name=exp_name)
 
         else:
             plt.show()
