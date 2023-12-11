@@ -39,7 +39,23 @@ def execute_attack(name, exp_name, start, end):
             'remain_list': ['feature_type', 'channel_mean', 'stages', 'alpha', 'lr', 'M', 'adv_type', 'constrain', 'global_scale', 'use_channel_scale']
         },
         'THA': {
-
+            'attack_params': {
+                # NOTE: best for now, 2023.12.11
+                'modify_percent': 0.7,
+                'scale_factor': 0.01,
+                'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
+                'ckpt_file': "pretrained/fr_r101_coco_0394.pth",
+                'feature_type' :  'neck',
+                'channel_mean': False,
+                'stages': [0], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
+                'p': 2,
+                'alpha': 1,
+                'lr': 0.05,
+                'M': 300, 
+                'adv_type': 'residual',
+                'constrain': 'consine_sim', # distance 似乎也不错，但consine_sim的噪声更小
+            },
+            'remain_list': ['feature_type', 'channel_mean', 'stages', 'alpha', 'lr', 'M', 'adv_type', 'constrain', 'modify_percent', 'scale_factor']
         },
         'HEFMA': {
 
@@ -66,4 +82,5 @@ def execute_attack(name, exp_name, start, end):
 
 
 if __name__ == '__main__':
-    execute_attack(name='FMR', exp_name='negative_one_point_wise', start=0, end=1)
+    execute_attack(name='FMR', exp_name='negative_one_point_wise_1211', start=0, end=1)
+    # execute_attack(name='THA', exp_name='test', start=1, end=2)

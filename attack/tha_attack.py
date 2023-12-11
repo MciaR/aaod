@@ -10,7 +10,6 @@ from PIL import Image
 from torch.optim.lr_scheduler import StepLR
 
 
-# TODO: need moidify code correctly, now just copy from FMR Attack.
 class THAAttack(BaseAttack):
     """Top-k High Activation Attack.
     Args:         
@@ -31,7 +30,7 @@ class THAAttack(BaseAttack):
                  scale_factor=0.01,
                  cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
                  ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
-                 feature_type = 'backbone', # `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
+                 feature_type = 'neck', # `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
                  channel_mean=False, # means use `C` (channel) to comput loss, the featmap shape is (B, C, H, W).
                  stages: list = [4], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
                  p: int = 2, # attack param
@@ -92,7 +91,8 @@ class THAAttack(BaseAttack):
             scale_factor (float): miniumize factor
         """
         N, C, H, W = featmap.shape
-        modified_feat = None
+        modified_feat = None if self.channel_mean else featmap.clone()
+
         for sample_ind in range(N):
             sample_featmap = featmap[sample_ind]
             k = int(H * W * self.modify_percent)
@@ -100,13 +100,15 @@ class THAAttack(BaseAttack):
             _, topk_indices = self.get_topk_info(input=mean_featmap, k=k, largest=True)
 
             # scale indices value in each featmap
-            # featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = featmap[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * scale_factor
-            mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] = mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] * self.scale_factor
-            mean_featmap = mean_featmap.unsqueeze(0)
-            if modified_feat is None:
-                modified_feat = mean_featmap
+            if self.channel_mean:
+                mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] = mean_featmap[topk_indices[:, 0], topk_indices[:, 1]] * self.scale_factor
+                mean_featmap = mean_featmap.unsqueeze(0)
+                if modified_feat is None:
+                    modified_feat = mean_featmap
+                else:
+                    torch.stack((modified_feat, mean_featmap), dim=0)
             else:
-                torch.stack((modified_feat, mean_featmap), dim=0)
+                modified_feat[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] = modified_feat[sample_ind, :, topk_indices[:, 0], topk_indices[:, 1]] * self.scale_factor
 
         return modified_feat
 
@@ -221,10 +223,11 @@ class THAAttack(BaseAttack):
         step = 0
         optimizer = torch.optim.Adam(params=[r], lr=self.lr)
         scheduler = StepLR(optimizer,
-                               gamma = 0.1, # The number we multiply learning rate until the milestone. 
-                               step_size = self.M * 0.8)
-        loss_pertub = torch.nn.BCELoss() if self.constrain == 'consine_sim' else torch.nn.MSELoss()
-        loss_distance = torch.nn.MSELoss()
+                               gamma = 0.3, # The number we multiply learning rate until the milestone. 
+                               step_size = self.M * 0.3)
+        
+        sim_metric = torch.nn.BCELoss() # combined with consine_similarity, suitable for direction and value.
+        dis_metric = torch.nn.MSELoss() # cal loss directly, suitable for value.
 
         while step < self.M:
             # calculate output featmap
@@ -237,29 +240,29 @@ class THAAttack(BaseAttack):
             
             for p_fm, gt_fm in zip(pertub_featmap, attack_gt_featmap):
                 if self.channel_mean:
-                    # gt_fm : (B, H, W), p_fm: (B, C, H, W)
-                    if self.onstrain == 'consine_sim':
-                        p_fm_vector = p_fm.mean(dim=1).view(gt_fm.shape[0], -1) # (B, H*W)
-                        gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1) # (B, H*W)
-                        cosine_similarity = F.cosine_similarity(p_fm_vector, gt_fm_vector).unsqueeze(-1)
+                    p_fm = p_fm.mean(dim=1) # compress (B, C, H, W) to (B, H, W)
 
-                        labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
-                        l1 += (1 / len(self.stages)) * loss_pertub(cosine_similarity, labels)
-                    else:
-                        l1 += (1 / len(self.stages) * loss_pertub(p_fm.mean(dim=1), gt_fm)) 
-                else:
-                    # gt_fm: (B, C, H, W), p_fm: (B, C, H, W)
-                    if self.constrain == 'consine_sim':
-                        p_fm_vector = p_fm.view(gt_fm.shape[0], -1) # (B, C*H*W)
-                        gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1) # (B, C*H*W)
-                        cosine_similarity = F.cosine_similarity(p_fm_vector, gt_fm_vector).unsqueeze(-1)
+                # calculate consine_similarity
+                p_fm_vector = p_fm.view(gt_fm.shape[0], -1) # (B, H*W) if self.channel_mean else (B, C*H*W)
+                gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1)
+                labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
+                cosine_similarity = ((F.cosine_similarity(p_fm_vector, gt_fm_vector) + 1.) / 2.).unsqueeze(-1) # map consie_similarity to [0, 1]
+                sim_loss = sim_metric(cosine_similarity, labels)
 
-                        labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
-                        l1 += (1 / len(self.stages)) * loss_pertub(cosine_similarity, labels)
-                    else:
-                        l1 += (1 / len(self.stages)) * loss_pertub(p_fm, gt_fm)
+                # calculate distance
+                dis_loss = dis_metric(p_fm, gt_fm)
 
-            l2 = loss_distance(r, clean_image)
+                # decide loss format
+                if self.constrain == 'consine_sim':
+                    pertub_loss = sim_loss
+                elif self.constrain == 'distance':
+                    pertub_loss = dis_loss
+                elif self.constrain == 'combine':
+                    pertub_loss = sim_loss + dis_loss
+
+                l1 += (1 / len(self.stages)) * pertub_loss
+
+            l2 = dis_metric(r, clean_image)
             loss = l1 + self.alpha * l2
 
             optimizer.zero_grad()
@@ -277,13 +280,10 @@ class THAAttack(BaseAttack):
         # 这里用了squeeze实际上是只作为一张图片
         pertub_tensor = r.squeeze() - clean_image.squeeze()
         adv_tensor = r.squeeze()
-        if self.adv_type == 'residual':
-            pertub_tensor += clean_image.squeeze()
-            adv_tensor += clean_image.squeeze()
 
         pertub = self.reverse_augment(x=pertub_tensor, datasample=data['data_samples'][0])
         adv_image = self.reverse_augment(x=adv_tensor, datasample=data['data_samples'][0])
 
-        self.test_adv_result(clean_img=clean_image, adv_img=adv_tensor.unsqueeze(0))
+        # self.test_adv_result(clean_img=clean_image, adv_img=adv_tensor.unsqueeze(0))
 
         return pertub, adv_image
