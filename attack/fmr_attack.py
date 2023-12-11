@@ -70,40 +70,52 @@ class FMRAttack(BaseAttack):
         Returns:
             scales (torch.Tensor): scale factor respect to each element of x, it's in range [0.0, 2.0].
         """
-        mean_val = torch.mean(x)
-        return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
-        # return -1. * torch.ones_like(x)
+        # mean_val = torch.mean(x)
+        # return (1 - torch.sin(torch.pi * (x - 0.5))) * mean_val / x
+        return -1. * torch.ones_like(x)
     
+    # def modify_featmap(
+    #     self,
+    #     featmap: torch.Tensor,
+    # ):
+    #     """Modify activation of featmap to mean.
+    #     Args:
+    #         featmap (torch.Tensor): feature map you want to modifiy.
+    #         global_scale (float): scale factor for each channel.
+    #         channel_scale (bool): if `True`, channels `x` will be multiplied by `scale_map_function(x)`
+    #     """
+    
+    #     N, C, H, W = featmap.shape
+    #     modify_feat = torch.ones(N, C, H, W, device=self.device)
+
+    #     for sample_ind in range(N):
+    #         sample_featmap = featmap[sample_ind]
+    #         # (C, H*W)
+    #         sample_featmap = sample_featmap.reshape(C, -1)
+    #         # (C,)
+    #         channel_mean = torch.mean(sample_featmap, dim=-1)
+    #         channel_scale = self.scale_map_function(channel_mean) if self.use_channel_scale else torch.ones_like(channel_mean)
+    #         for c in range(C):
+    #             modify_feat[sample_ind][c, :, :] = modify_feat[sample_ind][c, :, :] * channel_mean[c] * self.global_scale * channel_scale[c]
+
+    #     return modify_feat
+
     def modify_featmap(
-        self,
-        featmap: torch.Tensor,
+            self,
+            featmap: torch.Tensor,
     ):
-        """Modify activation of featmap to mean.
+        """Modify activation of feamap point-wise.
         Args:
-            featmap (torch.Tensor): feature map you want to modifiy.
-            global_scale (float): scale factor for each channel.
-            channel_scale (bool): if `True`, channels `x` will be multiplied by `scale_map_function(x)`
+            featmap (torch.Tensor): feature map you want to modify.
         """
-    
-        N, C, H, W = featmap.shape
-        modify_feat = torch.ones(N, C, H, W, device=self.device)
+        reverse_feat = featmap.clone() * -1.
 
-        for sample_ind in range(N):
-            sample_featmap = featmap[sample_ind]
-            # (C, H*W)
-            sample_featmap = sample_featmap.reshape(C, -1)
-            # (C,)
-            channel_mean = torch.mean(sample_featmap, dim=-1)
-            channel_scale = self.scale_map_function(channel_mean) if self.use_channel_scale else torch.ones_like(channel_mean)
-            for c in range(C):
-                modify_feat[sample_ind][c, :, :] = modify_feat[sample_ind][c, :, :] * channel_mean[c] * self.global_scale * channel_scale[c]
-
-        return modify_feat
+        return reverse_feat
 
     def get_target_feature(
         self,
         img,
-        ):
+        ): 
         """Get target features for visualizer."""
         ori_features = self._forward(img=img, feature_type=self.feature_type)
         target_features = []

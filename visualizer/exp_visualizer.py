@@ -449,7 +449,7 @@ class ExpVisualizer():
                 self.save_heatmap_channel(ori_backbone_feat, clean_stage_preds, topk=100, save_dir=save_dir, save_name='clean', normalize_features=None, grey=feature_grey, alpha=0.5)
                 self.save_heatmap_channel(adv_backbone_feat, adv_stage_preds, topk=100, save_dir=save_dir, save_name='adv', normalize_features=ori_backbone_feat, grey=feature_grey, alpha=0.5)
 
-            self.analysiser.save_activate_map_channel_wise(img=ad_image_path, feature_type=feature_type, attack_name=self.attacker.get_attack_name(), exp_name=exp_name)
+            self.analysiser.save_activate_map_channel_wise(img=ad_image_path, feature_type=feature_type, attack_name=self.attacker.get_attack_name(), exp_name=exp_name + f'/{params_str}')
 
         else:
             plt.show()

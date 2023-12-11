@@ -8,8 +8,8 @@ from PIL import Image
 from torch.optim.lr_scheduler import StepLR
 
 
-class OTHAAttack(BaseAttack):
-    """Object-wise Top-k High Activation Attack.
+class HEFMAAttack(BaseAttack):
+    """Head Enhanced Feature Map Adversarial Attack.
     Args:         
         eplison (float): niose strength.    
         p (int): default `2`, p-norm to calculate distance between clean and adv image.
