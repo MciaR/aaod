@@ -212,13 +212,14 @@ class FMRAttack(BaseAttack):
 
             print(self.stages, stage_std_clean, stage_std_adv, sep='\n')
 
-    def generate_adv_samples(self, x):
+    def generate_adv_samples(self, x, log_info=True):
         """Attack method to generate adversarial image.
         Args:
             x (str): clean image path.
         Return:
             noise (np.ndarray | torch.Tensor): niose which add to clean image.
             adv (np.ndarray | torch.Tensor): adversarial image.
+            log_info (bool): if print the train information.
         """
         # get feature map of clean img.
         bb_outs = self._forward(img=x, feature_type=self.feature_type)
@@ -290,10 +291,8 @@ class FMRAttack(BaseAttack):
 
             step += 1
 
-            if step % 10 == 0:
+            if step % 10 == 0 and log_info:
                 print("Train step [{}/{}], lr: {:3f}, loss: {}, pertub_loss: {}, distance_loss: {}.".format(step, self.M, optimizer.param_groups[0]["lr"] , loss, l1, l2))
-
-        print("Generate adv compeleted!")
 
         # 这里用了squeeze实际上是只作为一张图片
         pertub_tensor = r.squeeze() - clean_image.squeeze()
@@ -302,6 +301,8 @@ class FMRAttack(BaseAttack):
         pertub = self.reverse_augment(x=pertub_tensor, datasample=data['data_samples'][0])
         adv_image = self.reverse_augment(x=adv_tensor, datasample=data['data_samples'][0])
 
-        self.test_adv_result(clean_img=clean_image, adv_img=adv_tensor.unsqueeze(0))
+        if log_info:
+            print("Generate adv compeleted!")
+            self.test_adv_result(clean_img=clean_image, adv_img=adv_tensor.unsqueeze(0))
 
         return pertub, adv_image

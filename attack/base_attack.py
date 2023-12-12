@@ -166,7 +166,7 @@ class BaseAttack():
         return result
     
     # NOTE: **kwargs在新版代码中可以不用，依然采用这种方式只是作为示例
-    def generate_adv_samples(self, x, **kwargs):
+    def generate_adv_samples(self, x, log_info=True, **kwargs):
         """Attack method to generate adversarial image.
         Args:
             x (str): clean image's path.
