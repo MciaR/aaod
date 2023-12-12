@@ -6,37 +6,94 @@ from tqdm import tqdm
 from multiprocessing import Process
 import torch
 
+MODEL_CFG_PREFIX = {
+    'FR_R101': 'configs/faster_rcnn_r101_fpn',
+    'FR_VGG16': 'configs/fr_vgg16',
+    'SSD300': 'configs/ssd300'
+}
 
-def generate_and_save(img_list, device):
-    config_file = 'configs/faster_rcnn_r101_fpn_coco.py'
-    checkpoint_file = 'pretrained/fr_r101_coco_0394.pth'
-    attack_params = {
-        'cfg_file': config_file,
-        'ckpt_file': checkpoint_file,
-        'global_scale': 1,
-        'use_channel_scale': False,
-        'feature_type': 'neck',
-        'channel_mean': False,
-        'stages': [0],
-        'p': 2,
-        'alpha': 5,
-        'lr': 0.05,
-        'M': 500,
-        # 'adv_type': 'direct', 
-        'adv_type': 'residual',
-        # 'constrain': 'distance'
-        # 'constrain': 'consine_sim'
-        'constrain': 'distance'
+DATASET_SUFFIX = {
+    'COCO': '_coco',
+    'VOC': '_voc' 
+}
+
+CKPT_FILE_PREFIX = {
+    'FR_R101': 'pretrained/fr_r101',
+    'FR_VGG16': 'pretrained/fr_vgg16',
+    'SSD300': 'pretrained/ssd300'
+}
+
+ATTACK_PARAMS = {
+    'FMR': {
+        'attack_params': {
+            # NOTE: best for now, 2023.12.11
+            'global_scale': 1,
+            'use_channel_scale': False,
+            'feature_type': 'neck',
+            'channel_mean': False,
+            'stages': [0],
+            'p': 2,
+            'alpha': 5,
+            'lr': 0.05,
+            'M': 500,
+            # 'adv_type': 'direct', 
+            'adv_type': 'residual',
+            # 'constrain': 'distance'
+            # 'constrain': 'consine_sim'
+            'constrain': 'distance'
+        },
+    },
+    'THA': {
+        'attack_params': {
+            # NOTE: best for now, 2023.12.11
+            'modify_percent': 0.7,
+            'scale_factor': 0.01,
+            'feature_type' :  'neck',
+            'channel_mean': False,
+            'stages': [0], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
+            'p': 2,
+            'alpha': 1,
+            'lr': 0.05,
+            'M': 300, 
+            'adv_type': 'residual',
+            'constrain': 'consine_sim', # distance 似乎也不错，但consine_sim的噪声更小
+        },
+    },
+    'HEFMA': {
+
     }
+}
 
-    attacker = FMRAttack(**attack_params, device=device)
+IMAGE_ROOT = {
+    # 'COCO': 'data/coco2017/images/val2017', 
+    'COCO': 'data/tiny_coco2017/images/val2017', # tiny for debug now.
+    'VOC': None,
+}
 
-    image_root ='data/coco2017/images/val2017'
-    adv_save_dir = 'data/coco2017/FMR/adv/fr_r101_tiny'
-    pertub_save_dir = 'data/coco2017/FMR/pertub/fr_r101_tiny'
-    # image_root = 'data/VOCdevkit/tiny_voc/JPEGImages'
-    # adv_save_dir = 'data/VOCdevkit/adv/fr_vgg_tiny/JPEGImages'
-    # pertub_save_dir = 'data/VOCdevkit/pertub/fr_vgg_tiny/JPEGImages'
+IMAGE_PATH_PREFIX = {
+    'COCO': 'data/coco2017',
+    'VOC': None,
+}
+
+def generate_and_save(img_list, model, dataset, attacker_name, device):
+    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'HEFMA']
+
+    model_config_path = MODEL_CFG_PREFIX[model] + DATASET_SUFFIX[dataset] + '.py'
+    checkpoint_file_path = CKPT_FILE_PREFIX[model] + DATASET_SUFFIX[dataset] + '.pth'
+    attack_params = ATTACK_PARAMS[attacker_name]
+
+    attack_params.update({'cfg_file': model_config_path, 'ckpt_file': checkpoint_file_path})
+
+    if attacker_name == 'FMR':
+        attacker = FMRAttack(**attack_params, device=device)
+    elif attacker_name == 'THA':
+        attacker = THAAttack(**attack_params, device=device)
+    elif attacker_name == 'HEFMA':
+        attacker = HEFMAAttack(**attack_params, device=device)
+
+    image_root = IMAGE_ROOT[dataset]
+    adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset], attacker_name, 'adv', model + '_tiny')
+    pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset], attacker_name, 'pertub', model + '_tiny')
 
     if not os.path.exists(adv_save_dir):
         os.makedirs(adv_save_dir)
@@ -59,14 +116,17 @@ def generate_and_save(img_list, device):
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')
     
-    # image_list = os.listdir('data/VOCdevkit/tiny_voc/JPEGImages')
-    image_list = os.listdir('data/tiny_coco2017/images/val2017')
+    # params
+    model = 'FR_R101'
+    dataset = 'COCO'
+    attacker_name = 'THA'
+
+    image_list = os.listdir(IMAGE_ROOT[model])
     img_l1 = image_list[:250]
     img_l2 = image_list[250:]
 
-    p1 = Process(target=generate_and_save, args=(img_l1, 'cuda:0'))
-    p2 = Process(target=generate_and_save, args=(img_l2, 'cuda:1'))
-
+    p1 = Process(target=generate_and_save, args=(img_l1, model, dataset, attacker_name, 'cuda:0'))
+    p2 = Process(target=generate_and_save, args=(img_l2, model, dataset, attacker_name, 'cuda:1'))
     # start
     p1.start()
     p2.start()
