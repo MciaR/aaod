@@ -216,10 +216,10 @@ class FMRAttack(BaseAttack):
         """Attack method to generate adversarial image.
         Args:
             x (str): clean image path.
+            log_info (bool): if print the train information.
         Return:
             noise (np.ndarray | torch.Tensor): niose which add to clean image.
             adv (np.ndarray | torch.Tensor): adversarial image.
-            log_info (bool): if print the train information.
         """
         # get feature map of clean img.
         bb_outs = self._forward(img=x, feature_type=self.feature_type)
