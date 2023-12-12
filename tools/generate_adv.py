@@ -80,7 +80,7 @@ def generate_and_save(img_list, model, dataset, attacker_name, device):
 
     model_config_path = MODEL_CFG_PREFIX[model] + DATASET_SUFFIX[dataset] + '.py'
     checkpoint_file_path = CKPT_FILE_PREFIX[model] + DATASET_SUFFIX[dataset] + '.pth'
-    attack_params = ATTACK_PARAMS[attacker_name]
+    attack_params = ATTACK_PARAMS[attacker_name]['attack_params']
 
     attack_params.update({'cfg_file': model_config_path, 'ckpt_file': checkpoint_file_path})
 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     dataset = 'COCO'
     attacker_name = 'THA'
 
-    image_list = os.listdir(IMAGE_ROOT[model])
+    image_list = os.listdir(IMAGE_ROOT[dataset])
     img_l1 = image_list[:250]
     img_l2 = image_list[250:]
 
