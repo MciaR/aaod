@@ -19,7 +19,7 @@ def execute_attack(name, exp_name, start, end):
             'attack_params': {
                 # NOTE: best for now, 2023.12.11
                 'cfg_file': 'configs/faster_rcnn_r101_fpn_coco.py',
-                'ckpt_file': 'pretrained/fr_r101_coco_0394.pth',
+                'ckpt_file': 'pretrained/fr_r101_coco.pth',
                 'global_scale': 1,
                 'use_channel_scale': False,
                 'feature_type': 'neck',
@@ -44,7 +44,7 @@ def execute_attack(name, exp_name, start, end):
                 'modify_percent': 0.7,
                 'scale_factor': 0.01,
                 'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
-                'ckpt_file': "pretrained/fr_r101_coco_0394.pth",
+                'ckpt_file': "pretrained/fr_r101_coco.pth",
                 'feature_type' :  'neck',
                 'channel_mean': False,
                 'stages': [0], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
