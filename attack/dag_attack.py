@@ -66,6 +66,24 @@ class DAGAttack(BaseAttack):
         
         return ori_pic    
     
+    def get_pred_results(
+            self,
+            x,
+            data):
+        """Get pred result of x.
+        Args:
+            x (torch.Tensor): image tensor after preprocess and transform.
+            data (dict): a dict variable which send to `model.test_step()`.
+        Returns:
+            result (DetDataSample): result of pred.
+        """
+        data['inputs'] = x
+        # forward the model
+        with torch.no_grad():
+            results = self.model.test_step(data)[0]
+
+        return results, data
+    
     def generate_adv_samples(self, x, log_info=True):
         """Attack method to generate adversarial image.
         Funcs:
@@ -85,7 +103,7 @@ class DAGAttack(BaseAttack):
         clean_image = data['inputs']
 
         # get clean labels
-        clean_boxes, clean_labels = self.get_clean_targets(clean_image)
+        clean_boxes, clean_labels = self.get_pred_results(clean_image, data)
         # get adv labels
         adv_boxes, adv_labels = self.get_adv_targets(clean_labels)
 
@@ -142,6 +160,3 @@ class DAGAttack(BaseAttack):
             print(f"Generate adv compeleted! Cost iterations {step}.")
 
         return pertub, adv_image
-
-
-

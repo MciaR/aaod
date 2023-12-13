@@ -244,6 +244,9 @@ class ExpVisualizer():
             dataset_idx=None,
             img=None,
             data_sample=None,
+            show_features=True,
+            show_lvl_preds=True,
+            save_analysis=True,
             save=False,
             save_topk_heatmap=False,
             feature_grey=True,
@@ -256,6 +259,9 @@ class ExpVisualizer():
             model_name (str): name of infer model.
             dataset_idx (int): index of dataset.
             data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
+            show_features (bool): whether show the features, includes ori, gt, adv.
+            show_lvl_preds (bool): whether show the pred results of every stages.
+            save_analysis (bool): whether save analysis result.
             save (bool): whether save pic. if it is True, pic will not be shown when running.
             save_topk_heatmap (bool): whether save topk heatmap.
             feature_grey (bool): whether show grey feature map or heatmap.
@@ -276,7 +282,11 @@ class ExpVisualizer():
 
         feature_type = self.attacker.feature_type
     
-        row, col = (6, 5)
+        row, col = (1, 5)
+        if show_features:
+            row += 3
+        if show_lvl_preds:
+            row += 2
         plt.figure(frameon=False, figsize=(18, 15), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
@@ -332,109 +342,112 @@ class ExpVisualizer():
             plt.imshow(image_list[i])  
             ind += 1
 
-        # clean backbone featmap
-        ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
-        # target featmap
-        gt_backbone_feat = self.attacker.get_target_feature(img=img_path)
-        # adv backbone featmap
-        adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
+        if show_features:
+            # clean backbone featmap
+            ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
+            # target featmap
+            gt_backbone_feat = self.attacker.get_target_feature(img=img_path)
+            # adv backbone featmap
+            adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
 
-        # ====== Second row: ori backbone ======
-        for i in range(col):
-            if i < len(ori_backbone_feat):
+            # ====== Second row: ori backbone ======
+            for i in range(col):
+                if i < len(ori_backbone_feat):
+                    plt.subplot(row, col, ind)
+                    plt.xticks([],[])
+                    plt.yticks([],[])
+                    if i == 0:
+                        plt.ylabel(f"ori {feature_type}")
+                    _feature = ori_backbone_feat[i].squeeze(0)
+                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=None)
+                    plt.title(f"stage {i}", fontsize=10)
+                    plt.imshow(feature_map)
+                ind += 1
+
+            # ====== Third row: gt backbone ======
+            for i in range(col):
+                if i < len(gt_backbone_feat):
+                    plt.subplot(row, col, ind)
+                    plt.xticks([],[])
+                    plt.yticks([],[])
+                    if i == 0:
+                        plt.ylabel(f"adv gt {feature_type}")
+                    _feature = gt_backbone_feat[i].squeeze(0)
+                    _norm_target = ori_backbone_feat[i].squeeze(0)
+                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
+                    plt.title(f"stage {i}", fontsize=10)
+                    plt.imshow(feature_map)
+                ind += 1
+
+            # ===== Fourth row: adv backbone =====
+            for i in range(col):
+                if i < len(adv_backbone_feat):
+                    plt.subplot(row, col, ind)
+                    plt.xticks([],[])
+                    plt.yticks([],[])
+                    if i == 0:
+                        plt.ylabel(f"adv {feature_type}")
+                    _feature = adv_backbone_feat[i].squeeze(0)
+                    _norm_target = ori_backbone_feat[i].squeeze(0)
+                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
+                    plt.title(f"stage {i}", fontsize=10)
+                    plt.imshow(feature_map)
+                ind += 1  
+
+        if show_lvl_preds:
+            # for fr
+            # ====== row 5: each level pred results of clean ======      
+            clean_stage_preds = []      
+            for i in range(col):
                 plt.subplot(row, col, ind)
                 plt.xticks([],[])
                 plt.yticks([],[])
                 if i == 0:
-                    plt.ylabel(f"ori {feature_type}")
+                    plt.ylabel(f"Pred result")
+                pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
+                clean_neck_pred = self.visualizer.draw_dt_gt(
+                    name='pred',
+                    image=_image,
+                    draw_gt=False,
+                    data_sample=pred_res,
+                    pred_score_thr=0)
+                clean_stage_preds.append(clean_neck_pred)
                 _feature = ori_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=None)
-                plt.title(f"stage {i}", fontsize=10)
-                plt.imshow(feature_map)
-            ind += 1
+                clean_heatmap_pred = self.visualizer.draw_featmap(_feature, clean_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5)
+                plt.title(f"clean Fpn {i} pred", fontsize=10)
+                plt.imshow(clean_heatmap_pred)
+                ind += 1
 
-        # ====== Third row: gt backbone ======
-        for i in range(col):
-            if i < len(gt_backbone_feat):
+            # ====== row 6: each level pred results adv ======      
+            adv_stage_preds = []      
+            for i in range(col):
                 plt.subplot(row, col, ind)
                 plt.xticks([],[])
                 plt.yticks([],[])
                 if i == 0:
-                    plt.ylabel(f"adv gt {feature_type}")
-                _feature = gt_backbone_feat[i].squeeze(0)
-                _norm_target = ori_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
-                plt.title(f"stage {i}", fontsize=10)
-                plt.imshow(feature_map)
-            ind += 1
-
-        # ===== Fourth row: adv backbone =====
-        for i in range(col):
-            if i < len(adv_backbone_feat):
-                plt.subplot(row, col, ind)
-                plt.xticks([],[])
-                plt.yticks([],[])
-                if i == 0:
-                    plt.ylabel(f"adv {feature_type}")
+                    plt.ylabel(f"Pred result")
+                pred_res = self.visualizer.get_multi_level_pred(index=i, img=ad_image_path)
+                adv_neck_pred = self.visualizer.draw_dt_gt(
+                    name='pred',
+                    image=_ad_image,
+                    draw_gt=False,
+                    data_sample=pred_res,
+                    pred_score_thr=0)
+                adv_stage_preds.append(adv_neck_pred)
                 _feature = adv_backbone_feat[i].squeeze(0)
                 _norm_target = ori_backbone_feat[i].squeeze(0)
-                feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
-                plt.title(f"stage {i}", fontsize=10)
-                plt.imshow(feature_map)
-            ind += 1  
-
-        # for fr
-        # ====== row 5: each level pred results of clean ======      
-        clean_stage_preds = []      
-        for i in range(col):
-            plt.subplot(row, col, ind)
-            plt.xticks([],[])
-            plt.yticks([],[])
-            if i == 0:
-                plt.ylabel(f"Pred result")
-            pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
-            clean_neck_pred = self.visualizer.draw_dt_gt(
-                name='pred',
-                image=_image,
-                draw_gt=False,
-                data_sample=pred_res,
-                pred_score_thr=0)
-            clean_stage_preds.append(clean_neck_pred)
-            _feature = ori_backbone_feat[i].squeeze(0)
-            clean_heatmap_pred = self.visualizer.draw_featmap(_feature, clean_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5)
-            plt.title(f"clean Fpn {i} pred", fontsize=10)
-            plt.imshow(clean_heatmap_pred)
-            ind += 1
-
-        # ====== row 6: each level pred results adv ======      
-        adv_stage_preds = []      
-        for i in range(col):
-            plt.subplot(row, col, ind)
-            plt.xticks([],[])
-            plt.yticks([],[])
-            if i == 0:
-                plt.ylabel(f"Pred result")
-            pred_res = self.visualizer.get_multi_level_pred(index=i, img=ad_image_path)
-            adv_neck_pred = self.visualizer.draw_dt_gt(
-                name='pred',
-                image=_ad_image,
-                draw_gt=False,
-                data_sample=pred_res,
-                pred_score_thr=0)
-            adv_stage_preds.append(adv_neck_pred)
-            _feature = adv_backbone_feat[i].squeeze(0)
-            _norm_target = ori_backbone_feat[i].squeeze(0)
-            adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5, normalize_target=_norm_target)
-            plt.title(f"adv Fpn {i} pred", fontsize=10)
-            plt.imshow(adv_heatmap_pred)
-            ind += 1
+                adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5, normalize_target=_norm_target)
+                plt.title(f"adv Fpn {i} pred", fontsize=10)
+                plt.imshow(adv_heatmap_pred)
+                ind += 1
 
         plt.tight_layout()
 
+        attack_params = self.attacker.attack_params
+        params_str = self.cvt_params2savename(attack_params, remain_list)
+        
         if save:
-            attack_params = self.attacker.attack_params
             img_name = os.path.basename(img_path).split('.')[0]
-            params_str = self.cvt_params2savename(attack_params, remain_list)
 
             save_dir = f'records/attack_result/{self.attacker.get_attack_name()}/{exp_name}/{params_str}'
             if save_topk_heatmap:
@@ -448,8 +461,9 @@ class ExpVisualizer():
             if save_topk_heatmap:
                 self.save_heatmap_channel(ori_backbone_feat, clean_stage_preds, topk=100, save_dir=save_dir, save_name='clean', normalize_features=None, grey=feature_grey, alpha=0.5)
                 self.save_heatmap_channel(adv_backbone_feat, adv_stage_preds, topk=100, save_dir=save_dir, save_name='adv', normalize_features=ori_backbone_feat, grey=feature_grey, alpha=0.5)
-
-            self.analysiser.save_activate_map_channel_wise(img=ad_image_path, feature_type=feature_type, attack_name=self.attacker.get_attack_name(), exp_name=exp_name + f'/{params_str}')
-
         else:
             plt.show()
+
+        if save_analysis:
+            self.analysiser.save_activate_map_channel_wise(img=ad_image_path, feature_type=feature_type, attack_name=self.attacker.get_attack_name(), exp_name=exp_name + f'/{params_str}')
+        
