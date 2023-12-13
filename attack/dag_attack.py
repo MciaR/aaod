@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import mmcv
+import random
 
 from attack import BaseAttack
 from PIL import Image
@@ -83,10 +84,22 @@ class DAGAttack(BaseAttack):
         data['inputs'] = x
         # forward the model
         with torch.no_grad():
-            results = self.model.test_step(data)[0]
+            results = self.model.predict(x, batch_data_samples=data['data_samples'])[0]
 
-        return results, data
+        return results.pred_instances.scores
     
+    def get_adv_targets(self, clean_labels: torch.Tensor, num_classes: int):
+        """Assign a set of correct labels to adversarial labels randomly.
+        Args:
+            clean_labels (torch.Tensor): shape is (NMS_NUM, 1).
+            num_classes (int): number of classes (including background cls).
+        """
+        # add a random num which range from [1, num_classes] to clean_labels and mod 81, then we get the adv_labels.
+        # that makes adv_labels[i] != clean_labels[i], and every element in adv_labels range from [0, num_classes]
+        adv_labels = (clean_labels + torch.randint(1, num_classes, (clean_labels.shape[0], ), device=self.device)) % num_classes
+
+        return adv_labels
+
     def generate_adv_samples(self, x, log_info=True):
         """Attack method to generate adversarial image.
         Funcs:
@@ -106,36 +119,37 @@ class DAGAttack(BaseAttack):
         clean_image = data['inputs']
 
         # get clean labels
-        clean_boxes, clean_labels = self.get_pred_results(clean_image, data)
+        clean_scores = self.get_pred_results(clean_image, data)
+        clean_labels = clean_scores.argmax(dim=-1)
         # get adv labels
-        adv_boxes, adv_labels = self.get_adv_targets(clean_labels)
+        adv_labels = self.get_adv_targets(clean_labels, num_classes=clean_scores.shape[1])
 
         # pertubed image, `X_m` in paper
         pertubed_image = clean_image.clone()
+        pertubed_image.requires_grad = True
 
         step = 0
-        loss_metric = torch.nn.CrossEntropyLoss(reduce='sum')
+        loss_metric = torch.nn.CrossEntropyLoss(reduction='sum')
 
         while step < self.M:
 
-            # get preds result
-            logits = self.get_pred_results(pertubed_image)
+            # get preds result, hack the predict, the batch_data_samples is fake.
+            logits = self.model.predict(pertubed_image, batch_data_samples=data['data_samples'])[0].pred_instances.scores
 
             # remain the correct targets, drop the incorrect i.e. successful attack targets.
             active_target_idx = logits.argmax(dim=1) != adv_labels
 
-            clean_boxes = clean_boxes[active_target_idx]
-            logits = logits[active_target_idx]
-            clean_labels = clean_labels[active_target_idx]
-            adv_labels = adv_labels[active_target_idx]
+            active_logits = logits[active_target_idx]
+            active_clean_labels = clean_labels[active_target_idx]
+            active_adv_labels = adv_labels[active_target_idx]
 
             # if all targets has been attacked successfully, attack ends.
-            if len(clean_boxes) == 0:
+            if len(active_clean_labels) == 0:
                 break
 
             # comput loss
-            correct_loss = loss_metric(logits, clean_labels)
-            adv_loss = loss_metric(logits, adv_labels)
+            correct_loss = loss_metric(active_logits, active_clean_labels)
+            adv_loss = loss_metric(active_logits, active_adv_labels)
             # decreasing adv_loss to make pertubed image predicted wrong, and increasing correct_loss to let result far from original correct labels.
             total_loss = adv_loss - correct_loss
 
@@ -151,6 +165,11 @@ class DAGAttack(BaseAttack):
             # Zero gradients
             pertubed_image_grad.zero_()
             self.model.zero_grad()
+
+            if step % 10 == 0 and log_info:
+                print("Generation step [{}/{}], loss: {}, attack percent: {}.".format(step, self.M, total_loss, (len(clean_labels) - len(active_clean_labels)) / len(clean_labels) * 100))
+
+            step += 1
 
         # 这里用了squeeze实际上是只作为一张图片
         pertub_tensor = pertubed_image.squeeze() - clean_image.squeeze()

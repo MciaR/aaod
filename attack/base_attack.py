@@ -20,6 +20,8 @@ class BaseAttack():
                  cfg_options: dict = None,
                  device='cuda:0',) -> None:
         self.device = device
+        self.cfg_file = cfg_file
+        self.ckpt_file = ckpt_file
         self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file, cfg_options=cfg_options)
         self.data_preprocessor = self.get_data_preprocess()
         self.test_pipeline = self.get_test_pipeline()
@@ -31,6 +33,9 @@ class BaseAttack():
 
         for key, value in self.attack_params.items():
             setattr(self, key, value)
+
+    def update_model(self):
+        self.model = self.get_model(cfg_file=self.cfg_file, ckpt_path=self.ckpt_file, cfg_options=None)
 
     def get_model(self, cfg_file, ckpt_path, cfg_options):
         """Initialize the detector with cfg and ckpt file.
@@ -108,6 +113,9 @@ class BaseAttack():
         
         assert os.path.exists(ad_img_path) and os.path.exists(pertub_img_path), \
             f'`{ad_img_path}` or `{pertub_img_path}` does not save successfully!.'
+        
+        # re-initialize model to remove modified cfg affection.
+        self.update_model()
         
         # forward detector to get pred results.
         result = self.get_pred(img=ad_img_path)
