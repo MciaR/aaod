@@ -66,7 +66,20 @@ def execute_attack(name, exp_name, start, end):
                 'ckpt_file': "pretrained/fr_r101_coco.pth",
                 'gamma': 0.5,
                 'M': 300,
-            }
+                'cfg_options': dict(
+                    model = dict(
+                        test_cfg = dict(
+                            rpn=dict( # makes attack dense region.
+                            nms_pre=5000,
+                            max_per_img=5000,
+                            nms=dict(type='nms', iou_threshold=0.9),
+                            min_bbox_size=0),
+                            rcnn=None, # makes pred result no nms.
+                        ),
+                    )
+                )
+            },
+            'remain_list': ['gamma', 'M']
         }
     }
     assert name in ['FMR', 'THA', 'HEFMA', 'DAG'], \

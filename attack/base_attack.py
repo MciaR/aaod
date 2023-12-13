@@ -17,9 +17,10 @@ class BaseAttack():
                  cfg_file, 
                  ckpt_file,
                  attack_params,
+                 cfg_options: dict = None,
                  device='cuda:0',) -> None:
         self.device = device
-        self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file)
+        self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file, cfg_options=cfg_options)
         self.data_preprocessor = self.get_data_preprocess()
         self.test_pipeline = self.get_test_pipeline()
         self.attack_params = dict(**attack_params)
@@ -31,8 +32,14 @@ class BaseAttack():
         for key, value in self.attack_params.items():
             setattr(self, key, value)
 
-    def get_model(self, cfg_file, ckpt_path):
-        model = init_detector(cfg_file, ckpt_path, device=self.device)
+    def get_model(self, cfg_file, ckpt_path, cfg_options):
+        """Initialize the detector with cfg and ckpt file.
+        Args:
+            cfg_file (str): config file path.
+            ckpt_path (str): checkpoint file path.
+            cfg_options (dict): a dict will overwirte corresponding cfg k-v pair in cfg_file.
+        """
+        model = init_detector(cfg_file, ckpt_path, device=self.device, cfg_options=cfg_options)
         return model 
     
     def get_test_pipeline(self, load_from_ndarray: bool = False):

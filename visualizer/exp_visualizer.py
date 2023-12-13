@@ -279,8 +279,6 @@ class ExpVisualizer():
             img_path = img
         else:
             img_path = data_sample.img_path
-
-        feature_type = self.attacker.feature_type
     
         row, col = (1, 5)
         if show_features:
@@ -343,6 +341,7 @@ class ExpVisualizer():
             ind += 1
 
         if show_features:
+            feature_type = self.attacker.feature_type
             # clean backbone featmap
             ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
             # target featmap
