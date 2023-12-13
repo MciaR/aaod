@@ -93,7 +93,7 @@ class DAGAttack(BaseAttack):
         pertubed_image = clean_image.clone()
 
         step = 0
-        loss_metric = torch.nn.CrossEntropyLoss()
+        loss_metric = torch.nn.CrossEntropyLoss(reduce='sum')
 
         while step < self.M:
 
@@ -125,7 +125,7 @@ class DAGAttack(BaseAttack):
             with torch.no_grad():
                 # Normalize grad, from paper Eq.(3)
                 r = (self.gamma / pertubed_image_grad.norm(float("inf"))) * pertubed_image_grad 
-                pertubed_image += r
+                pertubed_image -= r # gradient reverse direction is the direction of decreasing total_loss
 
             # Zero gradients
             pertubed_image_grad.zero_()

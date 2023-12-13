@@ -240,7 +240,7 @@ class FMRAttack(BaseAttack):
         
         # params
         step = 0
-        optimizer = torch.optim.Adam(params=[r], lr=self.lr)
+        optimizer = torch.optim.Adam(params=[r], lr=self.lr) # only update r's gradient.
         scheduler = StepLR(optimizer,
                                gamma = 0.3, # The number we multiply learning rate until the milestone. 
                                step_size = self.M * 0.3)

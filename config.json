@@ -1,0 +1,56 @@
+{
+    "FILE_CFG": {
+        "MODEL_CFG_PREFIX": {
+            "FR_R101": "configs/faster_rcnn_r101_fpn",
+            "FR_VGG16": "configs/fr_vgg16",
+            "SSD300": "configs/ssd300"
+        },
+        
+        "DATASET_SUFFIX": {
+            "COCO": "_coco",
+            "VOC": "_voc" 
+        },
+        
+        "CKPT_FILE_PREFIX": {
+            "FR_R101": "pretrained/fr_r101",
+            "FR_VGG16": "pretrained/fr_vgg16",
+            "SSD300": "pretrained/ssd300"
+        }
+    },
+    "ATTACKER_CFG": {
+        "FMR": {
+            "attack_params": {
+                "global_scale": 1,
+                "use_channel_scale": "False",
+                "feature_type": "neck",
+                "channel_mean": "False",
+                "stages": [0],
+                "p": 2,
+                "alpha": 5,
+                "lr": 0.05,
+                "M": 500,
+                "adv_type": "residual",
+                "constrain": "distance"
+            }
+        },
+        "THA": {
+            "attack_params": {
+                "modify_percent": 0.7,
+                "scale_factor": 0.01,
+                "feature_type" :  "neck",
+                "channel_mean": "False",
+                "stages": [0],
+                "p": 2,
+                "alpha": 1,
+                "lr": 0.05,
+                "M": 300, 
+                "adv_type": "residual",
+                "constrain": "consine_sim"
+            }
+        },
+        "HEFMA": {
+    
+        }
+
+    }
+}
