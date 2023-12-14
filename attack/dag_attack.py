@@ -91,11 +91,8 @@ class DAGAttack(BaseAttack):
 
             x = self.model.extract_feat(batch_inputs)
             # If there are no pre-defined proposals, use RPN to get proposals
-            rpn_results_list_rescale = self.model.rpn_head.predict(
-                x, batch_data_samples, rescale=True) # rescale to origin image size.
-            
             rpn_results_list = self.model.rpn_head.predict(
-                x, batch_data_samples, rescale=False)
+                x, batch_data_samples, rescale=False) # there `rescale` must be `False``, if `True`, will inconsist with gt_bboxes scale.
             
             results_list = self.model.roi_head.predict(
                 x, rpn_results_list, batch_data_samples, rescale=True)
@@ -103,7 +100,7 @@ class DAGAttack(BaseAttack):
             batch_data_samples = self.model.add_pred_to_datasample(
                 batch_data_samples, results_list)
             
-        proposal_bboxes = rpn_results_list_rescale[0].bboxes
+        proposal_bboxes = rpn_results_list[0].bboxes
         pred_scores = batch_data_samples[0].pred_instances.scores
         gt_bboxes = batch_data_samples[0].gt_instances.bboxes.to(self.device)
         gt_labels = batch_data_samples[0].gt_instances.labels.to(self.device)
@@ -256,7 +253,9 @@ class DAGAttack(BaseAttack):
         step = 0
         total_targets = len(target_labels)
         loss_metric = torch.nn.CrossEntropyLoss(reduction='sum')
-        # active_target_idx = torch.ones(adv_labels.shape, device=self.device).bool()
+
+        if log_info:
+            print(f'Start generating adv, total rpn proposal: {total_targets}.')
 
         while step < self.M:
 

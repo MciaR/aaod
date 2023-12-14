@@ -65,7 +65,7 @@ def execute_attack(name, exp_name, start, end):
                 'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
                 'ckpt_file': "pretrained/fr_r101_coco.pth",
                 'gamma': 0.5,
-                'M': 500,
+                'M': 200,
                 'cfg_options': dict(
                     model = dict(
                         test_cfg = dict(

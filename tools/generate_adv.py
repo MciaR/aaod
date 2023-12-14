@@ -61,6 +61,26 @@ ATTACK_PARAMS = {
     },
     'HEFMA': {
 
+    },
+    'DAG': {
+        'attack_params': {
+            'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
+            'ckpt_file': "pretrained/fr_r101_coco.pth",
+            'gamma': 0.5,
+            'M': 200,
+            'cfg_options': dict(
+                model = dict(
+                    test_cfg = dict(
+                        rpn=dict( # makes attack dense region.
+                        nms_pre=5000,
+                        max_per_img=5000,
+                        nms=dict(type='nms', iou_threshold=0.9),
+                        min_bbox_size=0),
+                        rcnn=None, # makes pred result no nms.
+                    ),
+                )
+            )
+        }
     }
 }
 
@@ -76,7 +96,7 @@ IMAGE_PATH_PREFIX = {
 }
 
 def generate_and_save(img_list, model, dataset, attacker_name, device):
-    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'HEFMA']
+    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'HEFMA', 'DAG']
 
     model_config_path = MODEL_CFG_PREFIX[model] + DATASET_SUFFIX[dataset] + '.py'
     checkpoint_file_path = CKPT_FILE_PREFIX[model] + DATASET_SUFFIX[dataset] + '.pth'
@@ -90,6 +110,8 @@ def generate_and_save(img_list, model, dataset, attacker_name, device):
         attacker = THAAttack(**attack_params, device=device)
     elif attacker_name == 'HEFMA':
         attacker = HEFMAAttack(**attack_params, device=device)
+    elif attacker_name == 'DAG':
+        attacker = DAGAttack(**attack_params, device=device)
 
     image_root = IMAGE_ROOT[dataset]
     adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset], attacker_name, 'adv', model + '_tiny')
@@ -119,7 +141,7 @@ if __name__ == "__main__":
     # params
     model = 'FR_R101'
     dataset = 'COCO'
-    attacker_name = 'THA'
+    attacker_name = 'DAG'
 
     image_list = os.listdir(IMAGE_ROOT[dataset])
     img_l1 = image_list[:250]
