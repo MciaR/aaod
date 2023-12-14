@@ -268,6 +268,57 @@
 # model = resnet50()
 # print(model)
 
-print(1 + 2 / 3)
+# import torch
+# bboxes1 = torch.randint(0, 224, (5, 4))
+# bboxes2 = torch.randint(0, 224, (6, 4))
 
+# def pairwise_iou(bboxes1, bboxes2):
+#     """Calculate each pair iou in bboxes1 and bboxes2.
+#     Args:
+#         bboxes1 (torch.Tensor): shape is (N, 4)
+#         bboxes2 (torch.Tensor): shape is (M, 4)
+#     Returns:
+#         paired_ious (torh.Tensor): shape is (N, M)
+#     """
+#     N, M = bboxes1.shape[0], bboxes2.shape[0]
+#     area1 = (bboxes1[:, 2] - bboxes1[:, 0]) * (bboxes1[:, 3] - bboxes1[:, 1])
+#     area2 = (bboxes2[:, 2] - bboxes2[:, 0]) * (bboxes2[:, 3] - bboxes2[:, 1])
 
+#     ious = []
+
+#     for i in range(N):
+#         bbox1 = bboxes1[i]
+#         xmin = torch.max(bbox1[0], bboxes2[:, 0])
+#         ymin = torch.max(bbox1[1], bboxes2[:, 1])
+#         xmax = torch.min(bbox1[2], bboxes2[:, 2])
+#         ymax = torch.min(bbox1[3], bboxes2[:, 3])
+
+#         w = xmax - xmin
+#         h = ymax - ymin
+#         inter = w * h 
+#         iou = inter / (area1[i] + area2 - inter)
+#         ious.append(iou)
+
+#     ious = torch.stack(ious, dim=0)
+#     return ious
+
+# print(pairwise_iou(bboxes1, bboxes2).shape)
+
+import torch
+# M = 3, N = 5
+# pred_scores = torch.tensor([[0.1, 0.9], [0.4, 0.6], [0.3, 0.7]])
+# paired_idx = torch.tensor([2, 1, 4])
+# gt_labels = torch.tensor([1, 0, 1, 0, 1])
+
+# #cls_idx = gt_labels[paired_idx]
+# cls_idx_repeat = gt_labels.repeat(3, 1)
+# cls_idx = cls_idx_repeat[torch.arange(3), paired_idx]
+# print(cls_idx)
+# paired_scores = pred_scores[torch.arange(pred_scores.shape[0]), cls_idx]
+# print(paired_scores)
+# score_cond = paired_scores > 0.1
+# print(score_cond)
+idx = torch.tensor([1, 0, 0])
+nums = torch.tensor([[0.1, 0.9], [0.8, 0.4], [0.3, 0.7]])
+output = nums[torch.arange(nums.shape[0]), idx]
+print(output)

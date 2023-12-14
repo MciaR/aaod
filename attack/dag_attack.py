@@ -70,7 +70,7 @@ class DAGAttack(BaseAttack):
         
         return ori_pic    
     
-    def get_pred_results(
+    def get_clean_targets(
             self,
             x,
             data):
@@ -87,6 +87,78 @@ class DAGAttack(BaseAttack):
             results = self.model.predict(x, batch_data_samples=data['data_samples'])[0]
 
         return results.pred_instances.scores
+    
+    @staticmethod
+    def pairwise_iou(bboxes1, bboxes2):
+        """Calculate each pair iou in bboxes1 and bboxes2.
+        Args:
+            bboxes1 (torch.Tensor): shape is (N, 4)
+            bboxes2 (torch.Tensor): shape is (M, 4)
+        Returns:
+            paired_ious (torh.Tensor): shape is (N, M)
+        """
+        N, M = bboxes1.shape[0], bboxes2.shape[0]
+        area1 = (bboxes1[:, 2] - bboxes1[:, 0]) * (bboxes1[:, 3] - bboxes1[:, 1])
+        area2 = (bboxes2[:, 2] - bboxes2[:, 0]) * (bboxes2[:, 3] - bboxes2[:, 1])
+
+        ious = []
+
+        for i in range(N):
+            bbox1 = bboxes1[i]
+            xmin = torch.max(bbox1[0], bboxes2[:, 0])
+            ymin = torch.max(bbox1[1], bboxes2[:, 1])
+            xmax = torch.min(bbox1[2], bboxes2[:, 2])
+            ymax = torch.min(bbox1[3], bboxes2[:, 3])
+
+            w = xmax - xmin
+            h = ymax - ymin
+            inter = w * h 
+            iou = inter / (area1[i] + area2 - inter)
+            ious.append(iou)
+
+        ious = torch.stack(ious, dim=0)
+        return ious
+
+    
+    def select_positive_proposals(
+            self,
+            proposal_bboxes: torch.Tensor, 
+            pred_scores: torch.Tensor, 
+            gt_bboxes: torch.Tensor, 
+            gt_labels: torch.Tensor):
+        """Select high-quality targets for Attack.
+        Args:
+            proposal_bboxes (torch.Tensor): pred bboxes, shape is (proposal_num, 80 * 4).
+            pred_scores (torch.Tensor): pred scores, shape is (proposal_num, 80 + 1).
+            gt_bboxes (torch.Tensor): gt bboxes, shape is (gt_num, 4).
+            gt_labels (torch.Tensor): gt bboxes, shape is (gt_num, 1).
+        Returns:
+            positive_bboxes (torch.Tensor): remaining high quality targets bboxes.
+            positive_scores (torch.Tensor): remaining high quality targets scores.
+        """
+        # cal iou
+        ious = self.pairwise_iou(proposal_bboxes, gt_bboxes)
+
+        # find the max iou gt_bboxes for each proposal_bboxes, 
+        # that means every proposal_bboxes just has one gt_bboxes to pair.
+        paired_ious, paired_gt_idx = ious.max(dim=1)
+
+        # Filter for ious > 0.1
+        iou_remains = paired_ious > 0.1
+
+        # Filter for score of proposal > 0.1
+        # NOTE: Below 2 sentence is equals to `label_idx = gt_labels[paired_gt_idx].`
+        # cls_idx_repeat = gt_labels.repeat(proposal_num, 1)
+        # label_idx = cls_idx_repeat[torch.arange(proposal_num), paired_gt_idx]
+        label_idx = gt_labels[paired_gt_idx] # (proposal_num, 1) get the label indices of gt bboxes which paired to proposal_bboxes.
+        paired_scores = pred_scores[torch.arange(pred_scores.shape[0]), label_idx] # (proposal_num, 1) get the scores corresponding to paried bboxes.
+        score_remains = paired_scores > 0.1
+
+        # Filter for positive proposals and their correspoinding gt labels
+        remains = iou_remains & score_remains
+
+        return proposal_bboxes[remains], label_idx[remains]
+
     
     def get_adv_targets(self, clean_labels: torch.Tensor, num_classes: int):
         """Assign a set of correct labels to adversarial labels randomly.
@@ -119,7 +191,7 @@ class DAGAttack(BaseAttack):
         clean_image = data['inputs']
 
         # get clean labels
-        clean_scores = self.get_pred_results(clean_image, data)
+        clean_scores = self.get_clean_targets(clean_image, data)
         clean_labels = clean_scores.argmax(dim=-1)
         # get adv labels
         adv_labels = self.get_adv_targets(clean_labels, num_classes=clean_scores.shape[1])
@@ -130,6 +202,7 @@ class DAGAttack(BaseAttack):
 
         step = 0
         loss_metric = torch.nn.CrossEntropyLoss(reduction='sum')
+        # active_target_idx = torch.ones(adv_labels.shape, device=self.device).bool()
 
         while step < self.M:
 
@@ -137,6 +210,7 @@ class DAGAttack(BaseAttack):
             logits = self.model.predict(pertubed_image, batch_data_samples=data['data_samples'])[0].pred_instances.scores
 
             # remain the correct targets, drop the incorrect i.e. successful attack targets.
+            # active_target_idx &= (logits.argmax(dim=1) != adv_labels)
             active_target_idx = logits.argmax(dim=1) != adv_labels
 
             active_logits = logits[active_target_idx]
@@ -167,7 +241,7 @@ class DAGAttack(BaseAttack):
             self.model.zero_grad()
 
             if step % 10 == 0 and log_info:
-                print("Generation step [{}/{}], loss: {}, attack percent: {}.".format(step, self.M, total_loss, (len(clean_labels) - len(active_clean_labels)) / len(clean_labels) * 100))
+                print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (len(clean_labels) - len(active_clean_labels)) / len(clean_labels) * 100))
 
             step += 1
 
