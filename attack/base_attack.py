@@ -34,9 +34,6 @@ class BaseAttack():
         for key, value in self.attack_params.items():
             setattr(self, key, value)
 
-    def update_model(self):
-        self.model = self.get_model(cfg_file=self.cfg_file, ckpt_path=self.ckpt_file, cfg_options=None)
-
     def get_model(self, cfg_file, ckpt_path, cfg_options):
         """Initialize the detector with cfg and ckpt file.
         Args:
@@ -80,7 +77,6 @@ class BaseAttack():
             data_sample (DetDataSample): contains gt_instances, i.e. gt bboxes and gt labels.
             exp_name (str): exp name.
         Return:
-            result (torch.Tensor | np.ndarray): result of inference.
             pertub_path (str): return path of pertub noise.
             adv_path (str):  return path of adversarial sample.
         """
@@ -114,14 +110,8 @@ class BaseAttack():
         
         assert os.path.exists(ad_img_path) and os.path.exists(pertub_img_path), \
             f'`{ad_img_path}` or `{pertub_img_path}` does not save successfully!.'
-        
-        # re-initialize model to remove modified cfg affection.
-        self.update_model()
-        
-        # forward detector to get pred results.
-        result = self.get_pred(img=ad_img_path)
 
-        return result, pertub_img_path, ad_img_path
+        return pertub_img_path, ad_img_path
 
     
     def get_data_from_img(self, img):

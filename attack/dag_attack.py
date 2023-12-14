@@ -91,8 +91,11 @@ class DAGAttack(BaseAttack):
 
             x = self.model.extract_feat(batch_inputs)
             # If there are no pre-defined proposals, use RPN to get proposals
+            rpn_results_list_rescale = self.model.rpn_head.predict(
+                x, batch_data_samples, rescale=True) # rescale to origin image size.
+            
             rpn_results_list = self.model.rpn_head.predict(
-                x, batch_data_samples, rescale=False) # there `rescale` must be `False``, if `True`, will inconsist with gt_bboxes scale.
+                x, batch_data_samples, rescale=False)
             
             results_list = self.model.roi_head.predict(
                 x, rpn_results_list, batch_data_samples, rescale=True)

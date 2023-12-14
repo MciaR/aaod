@@ -309,7 +309,8 @@ class ExpVisualizer():
             pred_score_thr=show_thr)
 
         # base_attack 里存了png
-        ad_result, pertub_img_path, ad_image_path = self.attacker.attack(img_path, data_sample=data_sample, exp_name=exp_name)
+        pertub_img_path, ad_image_path = self.attacker.attack(img_path, data_sample=data_sample, exp_name=exp_name)
+        ad_result = self.visualizer.get_pred(ad_image_path)
 
         ad_image = Image.open(ad_image_path)
         _ad_image = np.array(ad_image)

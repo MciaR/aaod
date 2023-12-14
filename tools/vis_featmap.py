@@ -62,6 +62,8 @@ def execute_attack(name, exp_name, start, end):
         },
         'DAG': {
             'attack_params': {
+                # 'cfg_file': "configs/fr_vgg16_coco.py", 
+                # 'ckpt_file': "pretrained/fr_vgg16_coco.pth",
                 'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
                 'ckpt_file': "pretrained/fr_r101_coco.pth",
                 'gamma': 0.5,
