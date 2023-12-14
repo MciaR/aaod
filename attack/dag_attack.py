@@ -103,9 +103,9 @@ class DAGAttack(BaseAttack):
             batch_data_samples = self.model.add_pred_to_datasample(
                 batch_data_samples, results_list)
             
-        proposal_bboxes = rpn_results_list[0].bboxes
+        proposal_bboxes = rpn_results_list_rescale[0].bboxes
         pred_scores = batch_data_samples[0].pred_instances.scores
-        gt_bboxes = batch_data_samples[0].gt_instances.bboxes.to(self.device)
+        gt_bboxes = batch_data_samples[0].gt_instances.bboxes.to(self.device) # gt_bboxes is also original image size.
         gt_labels = batch_data_samples[0].gt_instances.labels.to(self.device)
         num_classes = pred_scores.shape[1]
 
@@ -114,7 +114,7 @@ class DAGAttack(BaseAttack):
 
         # get un-rescaled bbox and corresponding scores
         active_rpn_instance = InstanceData()
-        active_rpn_instance.bboxes = rpn_results_list[0].bboxes[remains]
+        active_rpn_instance.bboxes = rpn_results_list[0].bboxes[remains] # rescaled, not original image size.
         active_rpn_instance.labels = rpn_results_list[0].labels[remains]
 
         rpn_results_list[0] = active_rpn_instance

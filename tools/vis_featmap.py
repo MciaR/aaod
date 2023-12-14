@@ -67,7 +67,7 @@ def execute_attack(name, exp_name, start, end):
                 'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
                 'ckpt_file': "pretrained/fr_r101_coco.pth",
                 'gamma': 0.5,
-                'M': 200,
+                'M': 500,
                 'cfg_options': dict(
                     model = dict(
                         test_cfg = dict(
@@ -118,4 +118,4 @@ def execute_attack(name, exp_name, start, end):
 if __name__ == '__main__':
     # execute_attack(name='FMR', exp_name='negative_one_point_wise_no_optimizer_1213', start=0, end=1)
     # execute_attack(name='THA', exp_name='test', start=1, end=2)
-    execute_attack(name='DAG', exp_name='test', start=0, end=1)
+    execute_attack(name='DAG', exp_name='fr_101', start=0, end=1)
