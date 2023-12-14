@@ -6,6 +6,7 @@ import random
 
 from attack import BaseAttack
 from PIL import Image
+from mmengine.structures import InstanceData
 from torch.optim.lr_scheduler import StepLR
 
 
@@ -70,23 +71,55 @@ class DAGAttack(BaseAttack):
         
         return ori_pic    
     
-    def get_clean_targets(
+    def get_targets(
             self,
-            x,
+            clean_image,
             data):
-        """Get pred result of x.
+        """Get active RPN proposals. 
         Args:
-            x (torch.Tensor): image tensor after preprocess and transform.
+            clean_image (torch.Tensor): clean image tensor after preprocess and transform.
             data (dict): a dict variable which send to `model.test_step()`.
         Returns:
             result (DetDataSample): result of pred.
         """
-        data['inputs'] = x
+        data['inputs'] = clean_image
         # forward the model
         with torch.no_grad():
-            results = self.model.predict(x, batch_data_samples=data['data_samples'])[0]
+            # results = self.model.predict(x, batch_data_samples=data['data_samples'])[0]
+            batch_data_samples = data['data_samples']
+            batch_inputs = data['inputs']
 
-        return results.pred_instances.scores
+            x = self.model.extract_feat(batch_inputs)
+            # If there are no pre-defined proposals, use RPN to get proposals
+            rpn_results_list_rescale = self.model.rpn_head.predict(
+                x, batch_data_samples, rescale=True) # rescale to origin image size.
+            
+            rpn_results_list = self.model.rpn_head.predict(
+                x, batch_data_samples, rescale=False)
+            
+            results_list = self.model.roi_head.predict(
+                x, rpn_results_list, batch_data_samples, rescale=True)
+
+            batch_data_samples = self.model.add_pred_to_datasample(
+                batch_data_samples, results_list)
+            
+        proposal_bboxes = rpn_results_list_rescale[0].bboxes
+        pred_scores = batch_data_samples[0].pred_instances.scores
+        gt_bboxes = batch_data_samples[0].gt_instances.bboxes.to(self.device)
+        gt_labels = batch_data_samples[0].gt_instances.labels.to(self.device)
+        num_classes = pred_scores.shape[1]
+
+        # use rescaled bbox to select positive proposals.
+        _, positive_scores, remains = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
+
+        # get un-rescaled bbox and corresponding scores
+        active_rpn_instance = InstanceData()
+        active_rpn_instance.bboxes = rpn_results_list[0].bboxes[remains]
+        active_rpn_instance.labels = rpn_results_list[0].labels[remains]
+
+        rpn_results_list[0] = active_rpn_instance
+
+        return rpn_results_list, positive_scores, num_classes
     
     @staticmethod
     def pairwise_iou(bboxes1, bboxes2):
@@ -135,6 +168,7 @@ class DAGAttack(BaseAttack):
         Returns:
             positive_bboxes (torch.Tensor): remaining high quality targets bboxes.
             positive_scores (torch.Tensor): remaining high quality targets scores.
+            remains (torch.Tensor[bool]): filter flag for proposal_bboxes and its label.
         """
         # cal iou
         ious = self.pairwise_iou(proposal_bboxes, gt_bboxes)
@@ -157,7 +191,7 @@ class DAGAttack(BaseAttack):
         # Filter for positive proposals and their correspoinding gt labels
         remains = iou_remains & score_remains
 
-        return proposal_bboxes[remains], label_idx[remains]
+        return proposal_bboxes[remains], label_idx[remains], remains
 
     
     def get_adv_targets(self, clean_labels: torch.Tensor, num_classes: int):
@@ -171,8 +205,26 @@ class DAGAttack(BaseAttack):
         adv_labels = (clean_labels + torch.randint(1, num_classes, (clean_labels.shape[0], ), device=self.device)) % num_classes
 
         return adv_labels
+    
+    def update_target_rpn_results(
+            self,
+            target_rpn_results,
+            remains,
+    ):
+        """Filter for active target_rpn_results (rpn proposals and labels).
+        Args:
+            target_rpn_results (List[DetDatasample]): Default length is 1.
+            remains (torch.tensor[bool]): filter flag for proposal_bboxes and its label.
+        """
+        active_rpn_instance = InstanceData()
+        active_rpn_instance.bboxes = target_rpn_results[0].bboxes[remains]
+        active_rpn_instance.labels = target_rpn_results[0].labels[remains]
 
-    def generate_adv_samples(self, x, log_info=True):
+        target_rpn_results[0] = active_rpn_instance
+
+        return target_rpn_results
+
+    def generate_adv_samples(self, x, data_sample, log_info=True):
         """Attack method to generate adversarial image.
         Funcs:
             `Loss_total={{\sum}_{n=1}^N}[f_{l_n}(X + r,t_n) - f_{l'_n}(X + r,t_n)]` (you can find it in the DAG paper),
@@ -189,41 +241,49 @@ class DAGAttack(BaseAttack):
         # initialize r
         data = self.get_data_from_img(img=x)
         clean_image = data['inputs']
+        data['data_samples'][0].gt_instances = data_sample.gt_instances
+        batch_data_samples = data['data_samples']
 
-        # get clean labels
-        clean_scores = self.get_clean_targets(clean_image, data)
-        clean_labels = clean_scores.argmax(dim=-1)
+        # get target labels and proposal bboxes which from RPN
+        target_rpn_results, target_labels, num_classes = self.get_targets(clean_image, data)
         # get adv labels
-        adv_labels = self.get_adv_targets(clean_labels, num_classes=clean_scores.shape[1])
+        adv_labels = self.get_adv_targets(target_labels, num_classes=num_classes)
 
         # pertubed image, `X_m` in paper
         pertubed_image = clean_image.clone()
         pertubed_image.requires_grad = True
 
         step = 0
+        total_targets = len(target_labels)
         loss_metric = torch.nn.CrossEntropyLoss(reduction='sum')
         # active_target_idx = torch.ones(adv_labels.shape, device=self.device).bool()
 
         while step < self.M:
 
-            # get preds result, hack the predict, the batch_data_samples is fake.
-            logits = self.model.predict(pertubed_image, batch_data_samples=data['data_samples'])[0].pred_instances.scores
+            # get features
+            features = self.model.extract_feat(pertubed_image)
+
+            predict_list = self.model.roi_head.predict(
+                features, target_rpn_results, batch_data_samples, rescale=True)
+            
+            logits = predict_list[0].scores
 
             # remain the correct targets, drop the incorrect i.e. successful attack targets.
             # active_target_idx &= (logits.argmax(dim=1) != adv_labels)
             active_target_idx = logits.argmax(dim=1) != adv_labels
 
             active_logits = logits[active_target_idx]
-            active_clean_labels = clean_labels[active_target_idx]
-            active_adv_labels = adv_labels[active_target_idx]
+            target_labels = target_labels[active_target_idx]
+            adv_labels = adv_labels[active_target_idx]
+            target_rpn_results = self.update_target_rpn_results(target_rpn_results, active_target_idx)
 
             # if all targets has been attacked successfully, attack ends.
-            if len(active_clean_labels) == 0:
+            if len(target_labels) == 0:
                 break
 
             # comput loss
-            correct_loss = loss_metric(active_logits, active_clean_labels)
-            adv_loss = loss_metric(active_logits, active_adv_labels)
+            correct_loss = loss_metric(active_logits, target_labels)
+            adv_loss = loss_metric(active_logits, adv_labels)
             # decreasing adv_loss to make pertubed image predicted wrong, and increasing correct_loss to let result far from original correct labels.
             total_loss = adv_loss - correct_loss
 
@@ -241,7 +301,7 @@ class DAGAttack(BaseAttack):
             self.model.zero_grad()
 
             if step % 10 == 0 and log_info:
-                print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (len(clean_labels) - len(active_clean_labels)) / len(clean_labels) * 100))
+                print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (total_targets - len(target_labels)) / total_targets * 100))
 
             step += 1
 

@@ -73,10 +73,11 @@ class BaseAttack():
         """Get attack name."""
         return type(self).__name__
     
-    def attack(self, img, exp_name=None):
+    def attack(self, img, data_sample=None, exp_name=None):
         """Get inference results of model.
         Args:
             img (str): img path.
+            data_sample (DetDataSample): contains gt_instances, i.e. gt bboxes and gt labels.
             exp_name (str): exp name.
         Return:
             result (torch.Tensor | np.ndarray): result of inference.
@@ -86,7 +87,7 @@ class BaseAttack():
         # get adversarial samples, kwargs must be implemented.
         # NOTE: old version code
         # pertub, adv = self.generate_adv_samples(x=img, **self.attack_params)
-        pertub, adv = self.generate_adv_samples(x=img)
+        pertub, adv = self.generate_adv_samples(x=img, data_sample=data_sample)
 
         attack_name = self.get_attack_name()
         save_dir = 'records/attack_pics/' + attack_name
@@ -181,10 +182,12 @@ class BaseAttack():
         return result
     
     # NOTE: **kwargs在新版代码中可以不用，依然采用这种方式只是作为示例
-    def generate_adv_samples(self, x, log_info=True, **kwargs):
+    def generate_adv_samples(self, x, data_sample=None, log_info=True, **kwargs):
         """Attack method to generate adversarial image.
         Args:
             x (str): clean image's path.
+            data_sample (DetDataSample): contains gt_instances, i.e. gt bboxes and gt labels. Default `None`.
+            log_info (bool): whether print training log. Default `True`.
             kwargs: other key-value args.    
         Return:
             noise (np.ndarray | torch.Tensor): niose which add to clean image.
