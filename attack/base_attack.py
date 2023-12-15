@@ -17,11 +17,13 @@ class BaseAttack():
                  cfg_file, 
                  ckpt_file,
                  attack_params,
+                 exp_name=None, 
                  cfg_options: dict = None,
                  device='cuda:0',) -> None:
         self.device = device
         self.cfg_file = cfg_file
         self.ckpt_file = ckpt_file
+        self.exp_name = exp_name
         self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file, cfg_options=cfg_options)
         self.data_preprocessor = self.get_data_preprocess()
         self.test_pipeline = self.get_test_pipeline()
@@ -70,7 +72,7 @@ class BaseAttack():
         """Get attack name."""
         return type(self).__name__
     
-    def attack(self, img, data_sample=None, exp_name=None):
+    def attack(self, img, data_sample=None):
         """Get inference results of model.
         Args:
             img (str): img path.
@@ -87,8 +89,8 @@ class BaseAttack():
 
         attack_name = self.get_attack_name()
         save_dir = 'records/attack_pics/' + attack_name
-        if exp_name is not None:
-            save_dir = os.path.join(save_dir, exp_name)
+        if self.exp_name is not None:
+            save_dir = os.path.join(save_dir, self.exp_name)
 
         adv_save_dir = os.path.join(save_dir, 'adv')
         pertub_save_dir = os.path.join(save_dir, 'pertub')

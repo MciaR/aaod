@@ -251,7 +251,6 @@ class ExpVisualizer():
             save_topk_heatmap=False,
             feature_grey=True,
             remain_list=['lr', 'M'],
-            exp_name='exp',
             show_thr=0.3):
         """Show `ori_img`, `noise`, `adv_samples`, `attack_results`.
         Args:
@@ -267,7 +266,6 @@ class ExpVisualizer():
             feature_grey (bool): whether show grey feature map or heatmap.
             attack_params (dict): attacker parameters.
             remain_list (list): decide which field will be saved in result file name.
-            exp_name (str): save directory name.
             show_thr (float): pred result threshold to show.
         """
         assert self.use_attack, \
@@ -279,6 +277,8 @@ class ExpVisualizer():
             img_path = img
         else:
             img_path = data_sample.img_path
+            
+        exp_name = self.attacker.exp_name
     
         row, col = (1, 5)
         if show_features:
@@ -309,7 +309,7 @@ class ExpVisualizer():
             pred_score_thr=show_thr)
 
         # base_attack 里存了png
-        pertub_img_path, ad_image_path = self.attacker.attack(img_path, data_sample=data_sample, exp_name=exp_name)
+        pertub_img_path, ad_image_path = self.attacker.attack(img_path, data_sample=data_sample)
         ad_result = self.visualizer.get_pred(ad_image_path)
 
         ad_image = Image.open(ad_image_path)

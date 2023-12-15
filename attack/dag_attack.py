@@ -19,14 +19,15 @@ class DAGAttack(BaseAttack):
     """
     def __init__(self, 
                  cfg_options,
-                 cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
-                 ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
+                 cfg_file, 
+                 ckpt_file,
+                 exp_name=None,
                  gamma=0.5,
                  M=500,
                  device='cuda:0') -> None:
         assert cfg_options is not None, \
             f'`cfg_options` cannot be `None` for DAG Attack.'
-        super().__init__(cfg_file, ckpt_file, device=device, cfg_options=cfg_options,
+        super().__init__(cfg_file, ckpt_file, device=device, cfg_options=cfg_options, exp_name=exp_name,
                          attack_params=dict(gamma=gamma, M=M))
         
     def reverse_augment(self, x, datasample):

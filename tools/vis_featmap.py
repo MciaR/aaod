@@ -58,7 +58,27 @@ def execute_attack(name, exp_name, start, end):
             'remain_list': ['feature_type', 'channel_mean', 'stages', 'alpha', 'lr', 'M', 'adv_type', 'constrain', 'modify_percent', 'scale_factor']
         },
         'HEFMA': {
-
+            'attack_params': {
+                # 'cfg_file': "configs/fr_vgg16_coco.py", 
+                # 'ckpt_file': "pretrained/fr_vgg16_coco.pth",
+                'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
+                'ckpt_file': "pretrained/fr_r101_coco.pth",
+                'gamma': 0.5,
+                'M': 500,
+                'cfg_options': dict(
+                    model = dict(
+                        test_cfg = dict(
+                            rpn=dict( # makes attack dense region.
+                            nms_pre=5000,
+                            max_per_img=5000,
+                            nms=dict(type='nms', iou_threshold=0.9),
+                            min_bbox_size=0),
+                            rcnn=None, # makes pred result no nms.
+                        ),
+                    )
+                )
+            },
+            'remain_list': ['gamma', 'M']
         },
         'DAG': {
             'attack_params': {
@@ -89,6 +109,7 @@ def execute_attack(name, exp_name, start, end):
     
     attack_cfg = cfg[name]
     attacker_params = attack_cfg['attack_params']
+    attacker_params.update({'exp_name': exp_name}) # update exp_name to attacker_papams
     remain_list = attack_cfg['remain_list']
     # expVisualizer params
     show_features = True
@@ -100,6 +121,9 @@ def execute_attack(name, exp_name, start, end):
     elif name == 'THA':
         attacker = THAAttack(**attacker_params)
     elif name == 'HEFMA':
+        show_features = False
+        show_lvl_preds = False
+        save_analysis = False
         attacker = HEFMAAttack(**attacker_params)
     elif name == 'DAG':
         show_features = False
@@ -111,11 +135,11 @@ def execute_attack(name, exp_name, start, end):
     dataset = vis.dataset
 
     for i in range(start, end):
-        vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, exp_name=exp_name, 
+        vis.show_attack_results(model_name="FR_R101_COCO", data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, 
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis)
 
 
 if __name__ == '__main__':
     # execute_attack(name='FMR', exp_name='negative_one_point_wise_no_optimizer_1213', start=0, end=1)
     # execute_attack(name='THA', exp_name='test', start=1, end=2)
-    execute_attack(name='DAG', exp_name='fr_101', start=0, end=1)
+    execute_attack(name='HEFMA', exp_name='fr_r101', start=0, end=1)

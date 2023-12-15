@@ -26,10 +26,11 @@ class FMRAttack(BaseAttack):
             - `True`, calculate each point mean by channel-wise, the featmap shape is (B, H, W).
     """
     def __init__(self, 
+                 cfg_file, 
+                 ckpt_file,
                  global_scale=1.1,
                  use_channel_scale=True,
-                 cfg_file="configs/faster_rcnn_r101_fpn_coco.py", 
-                 ckpt_file="pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth",
+                 exp_name=None,
                  feature_type = 'backbone', # `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
                  channel_mean=False, # means use `C` (channel) to comput loss, the featmap shape is (B, C, H, W).
                  stages: list = [4], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
@@ -40,7 +41,7 @@ class FMRAttack(BaseAttack):
                  adv_type='direct', # `direct` or `residual`, `direct` means cal pertub noise as whole image directly, `residual` means only cal pertub noise.
                  constrain='consine_sim', #  - default `consine_sim`, that means use consine similarity to comput loss. `distance`, that means use distance function to comput loss.
                  device='cuda:0') -> None:
-        super().__init__(cfg_file, ckpt_file, device=device, 
+        super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name,
                          attack_params=dict(global_scale=global_scale, use_channel_scale=use_channel_scale, p=p, alpha=alpha, stages=stages, M=M, lr=lr, feature_type=feature_type, adv_type=adv_type, constrain=constrain, channel_mean=channel_mean))
 
     def get_topk_info(
