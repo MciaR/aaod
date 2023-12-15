@@ -144,8 +144,8 @@ class DAGAttack(BaseAttack):
             xmax = torch.min(bbox1[2], bboxes2[:, 2])
             ymax = torch.min(bbox1[3], bboxes2[:, 3])
 
-            w = xmax - xmin
-            h = ymax - ymin
+            w = torch.clamp(xmax - xmin, min=0)
+            h = torch.clamp(ymax - ymin, min=0)
             inter = w * h 
             iou = inter / (area1[i] + area2 - inter)
             ious.append(iou)

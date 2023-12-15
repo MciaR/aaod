@@ -304,7 +304,9 @@
 
 # print(pairwise_iou(bboxes1, bboxes2).shape)
 
+import numpy as np
 import torch
+from collections import Counter
 # M = 3, N = 5
 # pred_scores = torch.tensor([[0.1, 0.9], [0.4, 0.6], [0.3, 0.7]])
 # paired_idx = torch.tensor([2, 1, 4])
@@ -318,7 +320,11 @@ import torch
 # print(paired_scores)
 # score_cond = paired_scores > 0.1
 # print(score_cond)
-idx = torch.tensor([1, 0, 0])
-nums = torch.tensor([[0.1, 0.9], [0.8, 0.4], [0.3, 0.7]])
-output = nums[torch.arange(nums.shape[0]), idx]
-print(output)
+# idx = torch.tensor([1, 0, 0])
+# nums = torch.tensor([[0.1, 0.9], [0.8, 0.4], [0.3, 0.7]])
+# output = nums[torch.arange(nums.shape[0]), idx]
+# print(output)
+
+a = torch.randint(0, 255, (64,))
+a = a.detach().cpu().numpy()
+print(Counter(a))

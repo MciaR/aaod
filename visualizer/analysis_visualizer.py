@@ -4,6 +4,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
+from collections import Counter
 from PIL import Image, ImageDraw, ImageFont
 
 from visualizer import AAVisualizer
@@ -23,6 +24,24 @@ class AnalysisVisualizer(AAVisualizer):
             name: str = 'analysis_visualizer'):
         super().__init__(cfg_file=cfg_file, ckpt_file=ckpt_file, name=name)
         self.save_dir = save_dir
+        self.color_panel = [
+            '#FFB300', '#803E75', '#FF6800', '#A6BDD7', '#C10020', '#CEA262', '#817066',
+            '#007D34', '#F6768E', '#00538A', '#FF7A5C', '#53377A', '#FF8E00', '#B32851',
+            '#F4C800', '#7F180D', '#93AA00', '#593315', '#F13A13', '#232C16', '#FF6EFF',
+            '#FFFF99', '#FF1CAE', '#FFCABD', '#B0DD16', '#6B440B', '#4D1E01', '#587E0E',
+            '#71B2C9', '#AD5D5D', '#92C7C7', '#88FFCC', '#F9E555', '#D2386C', '#AB92BF',
+            '#FFFF00', '#C2FFED', '#A1CAF1', '#F99379', '#604E97', '#F6A600', '#B3446C',
+            '#DCD300', '#8DB600', '#654522', '#E25822', '#2B3D26', '#F2F3F4', '#222222',
+            '#F1E788', '#FFA6C9', '#B2CEEE', '#5DA493', '#FFC800', '#7A89B8', '#E68FAC',
+            '#0067A5', '#F99379', '#604E97', '#F6A600', '#B3446C', '#DCD300', '#882D17',
+            '#8DB600', '#654522', '#E25822', '#2B3D26', '#F2F3F4', '#222222', '#F1E788',
+            '#FFA6C9', '#B2CEEE', '#5DA493', '#FFC800', '#7A89B8', '#E68FAC', '#0067A5',
+            '#F99379', '#604E97', '#F6A600', '#B3446C', '#DCD300', '#882D17', '#8DB600',
+            '#654522', '#E25822', '#2B3D26', '#F2F3F4', '#222222', '#F1E788', '#FFA6C9',
+            '#B2CEEE', '#5DA493', '#FFC800', '#7A89B8', '#E68FAC', '#0067A5', '#F99379',
+            '#604E97', '#F6A600', '#B3446C', '#DCD300', '#882D17', '#8DB600', '#654522'
+        ]
+
 
     @staticmethod
     def get_timestamp():
@@ -112,7 +131,7 @@ class AnalysisVisualizer(AAVisualizer):
             labels = labels.detach().cpu().numpy()
         if scores is not None and isinstance(scores, torch.Tensor):
             scores = scores.detach().cpu().numpy()        
-        color = ['#FFB6C1', '#D8BFD8', '#9400D3', '#483D8B', '#4169E1', '#00FFFF','#B1FFF0','#ADFF2F','#EEE8AA','#FFA500','#FF6347']
+        classes = self.dataset_meta['classes']
 
         # load image
         image = Image.open(image_path)
@@ -122,12 +141,12 @@ class AnalysisVisualizer(AAVisualizer):
 
         # Draw each bbox
         for i, bbox in enumerate(bboxes):
-            draw.rectangle([(bbox[0], bbox[1]), (bbox[2], bbox[3])], width=1, outline=color[0])
+            draw.rectangle([(bbox[0], bbox[1]), (bbox[2], bbox[3])], width=1, outline=self.color_panel[0])
 
             # Prepare label and scroe text
             label_text = ''
             if labels is not None:
-                label_text = str(labels[i])
+                label_text = str(classes[labels[i]])
             if scores is not None:
                 label_text += f'{scores[i]: .2f}'
 
@@ -143,3 +162,65 @@ class AnalysisVisualizer(AAVisualizer):
         plt.axis('off')
         plt.savefig(f'{save_path}/{customize_str}-{save_img_name}-{self.get_timestamp()}.jpg')
 
+    def visualize_category_amount(self, proposal_bboxes, gt_bboxes, proposal2gt_idx, image_path, exp_name, draw_proposals=True):
+        """Visualize each gt bboxes and its active proposal amount.
+        Args:
+            proposal_bboxes (torch.Tensor | np.ndarray): active proposal bboxes set, shape is (N, 4).
+            gt_bboxes (torch.Tensor | np.ndarray): gt bboxes set, shape is (M, 4).
+            proposal2gt_idx (torch.Tesnor | np.ndarray): the index of corresponding gt of each proposals, shape is (N, 1).
+            image_path (str): path of image.
+            exp_name (str): experience name.
+            draw_proposals (bool): whether show the proposal bboxes. Default `True`.
+        """
+        if proposal_bboxes is not None and isinstance(proposal_bboxes, torch.Tensor):
+            proposal_bboxes = proposal_bboxes.detach().cpu().numpy()
+        if gt_bboxes is not None and isinstance(gt_bboxes, torch.Tensor):
+            gt_bboxes = gt_bboxes.detach().cpu().numpy()
+        if proposal2gt_idx is not None and isinstance(proposal2gt_idx, torch.Tensor):
+            proposal2gt_idx = proposal2gt_idx.detach().cpu().numpy()
+
+        gt_propsal_nums = Counter(proposal2gt_idx)
+        gt_colors = []
+
+        # load image
+        image = Image.open(image_path)
+        draw = ImageDraw.Draw(image)
+
+        # Draw each bbox
+        if draw_proposals:
+            for bbox in proposal_bboxes:
+                draw.rectangle([(bbox[0], bbox[1]), (bbox[2], bbox[3])], width=1, outline=self.color_panel[0])
+
+        for i, gts in enumerate(gt_bboxes):
+            draw.rectangle([(gts[0], gts[1]), (gts[2], gts[3])], width=2, outline=self.color_panel[i + 1]) # proposal_bboxes 占了第一个颜色
+            draw.text((gts[0], gts[1]), f'p_num: {str(gt_propsal_nums[i])}', fill=self.color_panel[i + 1])
+            gt_colors.append(self.color_panel[i + 1])
+ 
+        save_path = os.path.join(self.save_dir, exp_name)
+        save_img_name = os.path.basename(image_path).split('.')[0]
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        plt.imshow(np.array(image))
+        plt.axis('off')
+        plt.savefig(f'{save_path}/{save_img_name}-{self.get_timestamp()}.jpg')
+
+        # TODO: 可以加一个柱形图，按gtbbox的area排序绘制，每个gt具有不同颜色，柱形高度为gt拥有的proposal数量。
+        plt.clf()
+        gt_bboxes_areas = (gt_bboxes[:, 2] - gt_bboxes[:, 0]) * (gt_bboxes[:, 3] - gt_bboxes[:, 1])
+        gt_bboxes_areas = gt_bboxes_areas.astype(int)
+        sorted_indices = np.argsort(gt_bboxes_areas)
+        sorted_gt_bboxes_areas = [gt_bboxes_areas[ind] for ind in sorted_indices]
+        sorted_gt_nums = [gt_propsal_nums[ind] for ind in sorted_indices]
+        sorted_colors = [gt_colors[ind] for ind in sorted_indices]
+
+        plt.figure(figsize=(10, 8), dpi=300)
+        bars = plt.bar(np.arange(len(gt_bboxes)), sorted_gt_nums, color=sorted_colors, tick_label=sorted_gt_bboxes_areas)
+        for i, bar in enumerate(bars):
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval, int(yval), ha='center', va='bottom')
+        plt.xlabel('Bboxes')
+        plt.ylabel('proposal_nums')
+        plt.xticks(rotation=45)
+        plt.title('Proposals amount of gt bboxes')
+        plt.savefig(f'{save_path}/{save_img_name}-bar_figure-{self.get_timestamp()}.jpg')

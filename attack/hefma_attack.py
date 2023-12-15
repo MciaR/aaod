@@ -111,10 +111,12 @@ class HEFMAAttack(BaseAttack):
         num_classes = pred_scores.shape[1]
 
         # use rescaled bbox to select positive proposals.
-        _exp_name = f'proposal_show/{self.get_attack_name()}/{self.exp_name}'
-        self.vis.visualize_bboxes(proposal_bboxes, batch_data_samples[0].img_path, exp_name=_exp_name, customize_str='original')
-        _, positive_scores, remains = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
-        self.vis.visualize_bboxes(proposal_bboxes[remains], batch_data_samples[0].img_path, exp_name=_exp_name, customize_str='filtered')
+        _base_exp_name = f'{self.get_attack_name()}/{self.exp_name}'
+        # self.vis.visualize_bboxes(gt_bboxes, batch_data_samples[0].img_path, exp_name=_exp_name, customize_str='gt', labels=gt_labels)
+        # self.vis.visualize_bboxes(proposal_bboxes, batch_data_samples[0].img_path, exp_name=f'proposal_show/{_base_exp_name}', customize_str='original')
+        _, positive_labels, remains, positive_proposal2gt_idx = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
+        # self.vis.visualize_bboxes(proposal_bboxes[remains], batch_data_samples[0].img_path, exp_name=f'proposal_show/{_base_exp_name}', customize_str='filtered', labels=positive_labels)
+        self.vis.visualize_category_amount(proposal_bboxes[remains], gt_bboxes, positive_proposal2gt_idx, batch_data_samples[0].img_path, exp_name=f'gt2proposal_amount/{_base_exp_name}')
 
         # get un-rescaled bbox and corresponding scores
         active_rpn_instance = InstanceData()
@@ -123,7 +125,7 @@ class HEFMAAttack(BaseAttack):
 
         rpn_results_list[0] = active_rpn_instance
 
-        return rpn_results_list, positive_scores, num_classes
+        return rpn_results_list, positive_labels, num_classes
     
     @staticmethod
     def pairwise_iou(bboxes1, bboxes2):
@@ -147,8 +149,8 @@ class HEFMAAttack(BaseAttack):
             xmax = torch.min(bbox1[2], bboxes2[:, 2])
             ymax = torch.min(bbox1[3], bboxes2[:, 3])
 
-            w = xmax - xmin
-            h = ymax - ymin
+            w = torch.clamp(xmax - xmin, min=0)
+            h = torch.clamp(ymax - ymin, min=0)
             inter = w * h 
             iou = inter / (area1[i] + area2 - inter)
             ious.append(iou)
@@ -195,7 +197,7 @@ class HEFMAAttack(BaseAttack):
         # Filter for positive proposals and their correspoinding gt labels
         remains = iou_remains & score_remains
 
-        return proposal_bboxes[remains], label_idx[remains], remains
+        return proposal_bboxes[remains], label_idx[remains], remains, paired_gt_idx[remains]
 
     
     def get_adv_targets(self, clean_labels: torch.Tensor, num_classes: int):
