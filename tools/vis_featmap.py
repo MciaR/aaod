@@ -142,4 +142,4 @@ def execute_attack(name, exp_name, start, end):
 if __name__ == '__main__':
     # execute_attack(name='FMR', exp_name='negative_one_point_wise_no_optimizer_1213', start=0, end=1)
     # execute_attack(name='THA', exp_name='test', start=1, end=2)
-    execute_attack(name='HEFMA', exp_name='fr_r101', start=3, end=4)
+    execute_attack(name='HEFMA', exp_name='fr_r101_attack_proposal_process', start=0, end=1)

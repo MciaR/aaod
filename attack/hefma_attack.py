@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import mmcv
-import random
+import copy
 
 from attack import BaseAttack
 from visualizer import AnalysisVisualizer
@@ -111,12 +111,11 @@ class HEFMAAttack(BaseAttack):
         num_classes = pred_scores.shape[1]
 
         # use rescaled bbox to select positive proposals.
-        _base_exp_name = f'{self.get_attack_name()}/{self.exp_name}'
-        # self.vis.visualize_bboxes(gt_bboxes, batch_data_samples[0].img_path, exp_name=_exp_name, customize_str='gt', labels=gt_labels)
+        # _base_exp_name = f'{self.get_attack_name()}/{self.exp_name}'
         # self.vis.visualize_bboxes(proposal_bboxes, batch_data_samples[0].img_path, exp_name=f'proposal_show/{_base_exp_name}', customize_str='original')
         _, positive_labels, remains, positive_proposal2gt_idx = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
-        # self.vis.visualize_bboxes(proposal_bboxes[remains], batch_data_samples[0].img_path, exp_name=f'proposal_show/{_base_exp_name}', customize_str='filtered', labels=positive_labels)
-        self.vis.visualize_category_amount(proposal_bboxes[remains], gt_bboxes, positive_proposal2gt_idx, batch_data_samples[0].img_path, exp_name=f'gt2proposal_amount/{_base_exp_name}')
+        # self.vis.visualize_bboxes(proposal_bboxes[remains], batch_data_samples[0].img_path, exp_name=f'proposal_show/{_base_exp_name}', customize_str='filtered')
+        # self.vis.visualize_category_amount(proposal_bboxes[remains], gt_bboxes, positive_proposal2gt_idx, batch_data_samples[0].img_path, exp_name=f'gt2proposal_amount/{_base_exp_name}')
 
         # get un-rescaled bbox and corresponding scores
         active_rpn_instance = InstanceData()
@@ -125,7 +124,7 @@ class HEFMAAttack(BaseAttack):
 
         rpn_results_list[0] = active_rpn_instance
 
-        return rpn_results_list, positive_labels, num_classes
+        return rpn_results_list, positive_labels, num_classes, rpn_results_list_rescale[0].bboxes[remains] # for analysis process of proposal attacking.
     
     @staticmethod
     def pairwise_iou(bboxes1, bboxes2):
@@ -251,7 +250,7 @@ class HEFMAAttack(BaseAttack):
         batch_data_samples = data['data_samples']
 
         # get target labels and proposal bboxes which from RPN
-        target_rpn_results, target_labels, num_classes = self.get_targets(clean_image, data)
+        target_rpn_results, target_labels, num_classes, attack_proposals_img_scale = self.get_targets(clean_image, data)
         # get adv labels
         adv_labels = self.get_adv_targets(target_labels, num_classes=num_classes)
 
@@ -265,6 +264,9 @@ class HEFMAAttack(BaseAttack):
 
         if log_info:
             print(f'Start generating adv, total rpn proposal: {total_targets}.')
+
+        # record attack process of proposals
+        accum_proposals = []
 
         while step < self.M:
 
@@ -308,9 +310,15 @@ class HEFMAAttack(BaseAttack):
             pertubed_image_grad.zero_()
             self.model.zero_grad()
 
+            attacked_this_round_proposals = attack_proposals_img_scale[~active_target_idx]
+            accum_proposals.append(attacked_this_round_proposals)
+
             if step % 10 == 0 and log_info:
                 print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (total_targets - len(target_labels)) / total_targets * 100))
-
+                _base_exp_name = f'{self.get_attack_name()}/{self.exp_name}'
+                self.vis.visualize_bboxes(torch.cat(accum_proposals, dim=0), batch_data_samples[0].img_path, exp_name=f'proposal_attack_process/{_base_exp_name}', customize_str=f'{step}')
+                accum_proposals = []
+            attack_proposals_img_scale = attack_proposals_img_scale[active_target_idx] # for analysis process of proposal attacking    
             step += 1
 
         # 这里用了squeeze实际上是只作为一张图片
