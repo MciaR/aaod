@@ -115,7 +115,7 @@ IMAGE_PATH_PREFIX = {
     'VOC': None,
 }
 
-def generate_and_save(dataset, model, dataset_name, attacker_name, device):
+def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset_name in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'EXPDAG', 'DAG']
 
     model_config_path = MODEL_CFG_PREFIX[model] + DATASET_SUFFIX[dataset_name] + '.py'
@@ -143,10 +143,16 @@ def generate_and_save(dataset, model, dataset_name, attacker_name, device):
     if not os.path.exists(pertub_save_dir):
         os.makedirs(pertub_save_dir)
 
-    for img in tqdm(img_list):
+    dataset = attacker.dataset
+    start_idx = int(start * len(dataset))
+    end_idx = int(end * len(dataset))
+
+    for data in tqdm(dataset[start_idx:end_idx]):
+        data_sample = data['data_samples']
+        img = data_sample.img_path
         img_path = os.path.join(image_root, img)
 
-        pertub, adv = attacker.generate_adv_samples(x=img_path, log_info=False)
+        pertub, adv = attacker.generate_adv_samples(x=img_path, data_sample=data_sample, log_info=False)
 
         adv_image = Image.fromarray(adv.astype(np.uint8))
         pertub_image = Image.fromarray(pertub.astype(np.uint8))
@@ -163,12 +169,9 @@ if __name__ == "__main__":
     dataset_name = 'COCO'
     attacker_name = 'DAG'
 
-    image_list = os.listdir(IMAGE_ROOT[dataset_name])
-    img_l1 = image_list[:250]
-    img_l2 = image_list[250:]
-
-    p1 = Process(target=generate_and_save, args=(img_l1, model, dataset_name, attacker_name, 'cuda:0'))
-    p2 = Process(target=generate_and_save, args=(img_l2, model, dataset_name, attacker_name, 'cuda:1'))
+    # must know dataset length
+    p1 = Process(target=generate_and_save, args=(0, 0.5, model, dataset_name, attacker_name, 'cuda:0'))
+    p2 = Process(target=generate_and_save, args=(0.5, 1, model, dataset_name, attacker_name, 'cuda:1'))
     # start
     p1.start()
     p2.start()

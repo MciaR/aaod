@@ -8,6 +8,7 @@ from PIL import Image
 from mmcv.transforms import Compose
 from mmdet.utils import get_test_pipeline_cfg
 from mmdet.apis import init_detector, inference_detector
+from mmdet.registry import DATASETS
 from mmengine.registry import MODELS
 
 
@@ -25,6 +26,7 @@ class BaseAttack():
         self.ckpt_file = ckpt_file
         self.exp_name = exp_name
         self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file, cfg_options=cfg_options)
+        self.dataset = self.get_dataset()
         self.data_preprocessor = self.get_data_preprocess()
         self.test_pipeline = self.get_test_pipeline()
         self.attack_params = dict(**attack_params)
@@ -45,6 +47,13 @@ class BaseAttack():
         """
         model = init_detector(cfg_file, ckpt_path, device=self.device, cfg_options=cfg_options)
         return model 
+    
+    def get_dataset(self):
+        """Get dataset from config."""
+        dataset_cfg = self.model.cfg._cfg_dict.test_dataloader.dataset
+        dataset = DATASETS.build(dataset_cfg)
+
+        return dataset
     
     def get_test_pipeline(self, load_from_ndarray: bool = False):
         """Get data preprocess pipeline"""
