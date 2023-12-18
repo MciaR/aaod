@@ -236,7 +236,7 @@ class AnalysisVisualizer(AAVisualizer):
         plt.savefig(f'{save_path}/{save_img_name}-bar_figure-{self.get_timestamp()}.jpg')
         plt.clf()
 
-    def visualize_intermediate_results(self, r, r_total, pertubed_image, attack_proposals, customize_str, image_path):
+    def visualize_intermediate_results(self, r, r_total, pertubed_image, attack_proposals, customize_str, image_path, exp_name):
         """Visualize the intermediate results.
         Args:
             r (np.ndarray): noise or gradient of pertubed image of this round, color channel: RGB.
@@ -245,6 +245,7 @@ class AnalysisVisualizer(AAVisualizer):
             attack_proposals (torch.Tensor | np.ndarray): 
             customize_str (Any): as a part of save path, e.g. `{save_dir}/{customize_str}-{image_name}.jpg`.
             image_path (str): path of image.
+            exp_name (str): name of experience.
         """
         assert isinstance(r, np.ndarray) and isinstance(pertubed_image, np.ndarray), \
             f'`r` and `pertubed_image` must be type of `np.ndarray`.'
@@ -281,7 +282,7 @@ class AnalysisVisualizer(AAVisualizer):
             plt.title(f"{title_list[i]}", fontsize=10)
             plt.imshow(vis_list[i])
         
-        save_path = os.path.join(self.save_dir, 'intermediate_results')
+        save_path = os.path.join(self.save_dir, 'intermediate_results', exp_name)
         save_img_name = os.path.basename(image_path).split('.')[0]
         if not os.path.exists(save_path):
             os.makedirs(save_path)
