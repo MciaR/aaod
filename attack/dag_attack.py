@@ -111,7 +111,7 @@ class DAGAttack(BaseAttack):
         num_classes = pred_scores.shape[1]
 
         # use rescaled bbox to select positive proposals.
-        _, positive_scores, remains = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
+        _, positive_labels, remains = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
 
         # get un-rescaled bbox and corresponding scores
         active_rpn_instance = InstanceData()
@@ -120,7 +120,7 @@ class DAGAttack(BaseAttack):
 
         rpn_results_list[0] = active_rpn_instance
 
-        return rpn_results_list, positive_scores, num_classes
+        return rpn_results_list, positive_labels, num_classes
     
     @staticmethod
     def pairwise_iou(bboxes1, bboxes2):

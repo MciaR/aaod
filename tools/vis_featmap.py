@@ -57,7 +57,7 @@ def execute_attack(name, exp_name, start, end):
             },
             'remain_list': ['feature_type', 'channel_mean', 'stages', 'alpha', 'lr', 'M', 'adv_type', 'constrain', 'modify_percent', 'scale_factor']
         },
-        'HEFMA': {
+        'EXPDAG': {
             'attack_params': {
                 # 'cfg_file': "configs/fr_vgg16_coco.py", 
                 # 'ckpt_file': "pretrained/fr_vgg16_coco.pth",
@@ -104,8 +104,8 @@ def execute_attack(name, exp_name, start, end):
             'remain_list': ['gamma', 'M']
         }
     }
-    assert name in ['FMR', 'THA', 'HEFMA', 'DAG'], \
-        f'`name` must be `FMR`, `THA`, `DAG` or `HEFMA`.'
+    assert name in ['FMR', 'THA', 'EXPDAG', 'DAG'], \
+        f'`name` must be `FMR`, `THA`, `DAG` or `EXPDAG`.'
     
     attack_cfg = cfg[name]
     attacker_params = attack_cfg['attack_params']
@@ -120,11 +120,11 @@ def execute_attack(name, exp_name, start, end):
         attacker = FMRAttack(**attacker_params)
     elif name == 'THA':
         attacker = THAAttack(**attacker_params)
-    elif name == 'HEFMA':
+    elif name == 'EXPDAG':
         show_features = False
         show_lvl_preds = False
         save_analysis = False
-        attacker = HEFMAAttack(**attacker_params)
+        attacker = EXPDAGAttack(**attacker_params)
     elif name == 'DAG':
         show_features = False
         show_lvl_preds = False
@@ -142,4 +142,4 @@ def execute_attack(name, exp_name, start, end):
 if __name__ == '__main__':
     # execute_attack(name='FMR', exp_name='negative_one_point_wise_no_optimizer_1213', start=0, end=1)
     # execute_attack(name='THA', exp_name='test', start=1, end=2)
-    execute_attack(name='HEFMA', exp_name='fr_r101_attack_proposal_process_jpg', start=0, end=1)
+    execute_attack(name='EXPDAG', exp_name='fr_r101_attack_proposal_process_jpg', start=0, end=1)

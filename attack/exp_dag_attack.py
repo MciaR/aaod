@@ -11,8 +11,8 @@ from mmengine.structures import InstanceData
 from torch.optim.lr_scheduler import StepLR
 
 
-class HEFMAAttack(BaseAttack):
-    """Head-Enhanced Feature Map Attack. 
+class EXPDAGAttack(BaseAttack):
+    """Experience and analysis for DAG Attack. 
         gamma (float): scale factor of normalizing noise `r`.
         M (float): SGD total step, if iter reach the limit or every RP has been attack, the loop ends (for DAG).
     """
