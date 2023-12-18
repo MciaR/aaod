@@ -237,16 +237,17 @@ class AnalysisVisualizer(AAVisualizer):
             f'`r` and `pertubed_image` must be type of `np.ndarray`.'
         
         row, col = (1, 3)
-        plt.figure(frameon=False, figsize=(3*row, 3*col), dpi=300)
+        plt.figure(frameon=False, figsize=(3*col, 3*row), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
         
         # convert RGB to BGR, cuz preprocess has processing of BGR2RGB,
         # that makes consistent result to pass a saved image to model.
-        noise_image = r.astype(np.uint8)[[2, 1, 0], ...]
-        pertubed_image = pertubed_image.astype(np.uint8)[[2, 1, 0], ...]
+        noise_image = r.astype(np.uint8)
+        pertubed_image = pertubed_image.astype(np.uint8)
+        pertubed_image_bgr = pertubed_image[..., [2, 1, 0]]
 
-        adv_results = self.get_pred(pertubed_image)
-        adv_image = self.visualizer.draw_dt_gt(
+        adv_results = self.get_pred(pertubed_image_bgr)
+        adv_image = self.draw_dt_gt(
             name='attack',
             image=pertubed_image,
             draw_gt=False,
