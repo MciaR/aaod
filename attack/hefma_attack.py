@@ -315,11 +315,11 @@ class HEFMAAttack(BaseAttack):
 
             if step % 10 == 0 and log_info:
                 print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (total_targets - len(target_labels)) / total_targets * 100))
-                _base_exp_name = f'{self.get_attack_name()}/{self.exp_name}'
-                self.vis.visualize_bboxes(torch.cat(accum_proposals, dim=0), batch_data_samples[0].img_path, exp_name=f'proposal_attack_process/{_base_exp_name}', customize_str=f'{step}')
                 self.vis.visualize_intermediate_results(r=self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0]),
+                                                        r_total = self.reverse_augment(x=pertubed_image.squeeze()-clean_image.squeeze(), datasample=data['data_samples'][0]),
                                                         pertubed_image=self.reverse_augment(x=pertubed_image.squeeze(), datasample=data['data_samples'][0]),
-                                                        round=step,
+                                                        customize_str=step,
+                                                        attack_proposals=torch.cat(accum_proposals, dim=0),
                                                         image_path=data['data_samples'][0].img_path)
                 accum_proposals = []
             attack_proposals_img_scale = attack_proposals_img_scale[active_target_idx] # for analysis process of proposal attacking    

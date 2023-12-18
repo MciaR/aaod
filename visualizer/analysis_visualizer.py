@@ -114,16 +114,18 @@ class AnalysisVisualizer(AAVisualizer):
         if data_sample is not None:
             save_img_name = str(data_idx) + '-' + save_img_name
         plt.savefig(f'{save_path}/{save_img_name}.jpg')
+        plt.clf()
 
-    def visualize_bboxes(self, bboxes, image_path, exp_name, customize_str, labels=None, scores=None):
+    def visualize_bboxes(self, bboxes, image_path, exp_name=None, customize_str=None, labels=None, scores=None, save=True):
         """Drawing bboxes into the image.
         Args:
             bboxes (torch.Tensor | np.ndarray): format is xyxy, and shape is (N, 4).
             image_path (str): path of image.
-            exp_name (str): experience name.
-            customize_str (str): as a part of save path, e.g. `{save_dir}/{customize_str}-{image_name}.jpg`
+            exp_name (str): experience name. Default `None`.
+            customize_str (str): as a part of save path, e.g. `{save_dir}/{customize_str}-{image_name}.jpg`. Default `None`.
             labels (torch.Tensor | np.ndarray): bboxes' labels, shape is (N, 1). Default `None`.
             scores (torch.Tensor | np.ndarray): bboxes' scores, shape is (N, 1). Default `None`.
+            save (bool): whether save the drawing result. Default `True`.
         """
         if isinstance(bboxes, torch.Tensor):
             bboxes = bboxes.detach().cpu().numpy()
@@ -153,14 +155,22 @@ class AnalysisVisualizer(AAVisualizer):
             if label_text:
                 draw.text((bbox[0], bbox[1]), label_text, fill="white")
         
-        save_path = os.path.join(self.save_dir, exp_name)
-        save_img_name = os.path.basename(image_path).split('.')[0]
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+        if save:
+            save_path = os.path.join(self.save_dir, exp_name) if exp_name else self.save_dir
+            save_img_name = os.path.basename(image_path).split('.')[0]
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
 
-        plt.imshow(np.array(image))
-        plt.axis('off')
-        plt.savefig(f'{save_path}/{customize_str}-{save_img_name}-{self.get_timestamp()}.jpg')
+            plt.imshow(np.array(image))
+            plt.axis('off')
+            if customize_str:
+                plt.savefig(f'{save_path}/{customize_str}-{save_img_name}-{self.get_timestamp()}.jpg')
+            else:
+                plt.savefig(f'{save_path}/{save_img_name}-{self.get_timestamp()}.jpg')
+        plt.clf()
+
+        return np.array(image)
+
 
     def visualize_category_amount(self, proposal_bboxes, gt_bboxes, proposal2gt_idx, image_path, exp_name, draw_proposals=True):
         """Visualize each gt bboxes and its active proposal amount.
@@ -224,27 +234,32 @@ class AnalysisVisualizer(AAVisualizer):
         plt.xticks(rotation=45)
         plt.title('Proposals amount of gt bboxes')
         plt.savefig(f'{save_path}/{save_img_name}-bar_figure-{self.get_timestamp()}.jpg')
+        plt.clf()
 
-    def visualize_intermediate_results(self, r, pertubed_image, round, image_path):
+    def visualize_intermediate_results(self, r, r_total, pertubed_image, attack_proposals, customize_str, image_path):
         """Visualize the intermediate results.
         Args:
             r (np.ndarray): noise or gradient of pertubed image of this round, color channel: RGB.
+            r_total (np.ndarray): the whole noise added to clean image, color channel: RGB.
             pertubed_image (np.ndarray): pertubed image for now, color channel: RGB.
-            round (int): round of adversarial generating for now.
+            attack_proposals (torch.Tensor | np.ndarray): 
+            customize_str (Any): as a part of save path, e.g. `{save_dir}/{customize_str}-{image_name}.jpg`.
             image_path (str): path of image.
         """
         assert isinstance(r, np.ndarray) and isinstance(pertubed_image, np.ndarray), \
             f'`r` and `pertubed_image` must be type of `np.ndarray`.'
         
-        row, col = (1, 3)
+        row, col = (1, 5)
         plt.figure(frameon=False, figsize=(3*col, 3*row), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
         
         # convert RGB to BGR, cuz preprocess has processing of BGR2RGB,
         # that makes consistent result to pass a saved image to model.
-        noise_image = r.astype(np.uint8)
+        r = r.astype(np.uint8)
+        r_total = r_total.astype(np.uint8)
         pertubed_image = pertubed_image.astype(np.uint8)
         pertubed_image_bgr = pertubed_image[..., [2, 1, 0]]
+        attack_proposals = self.visualize_bboxes(attack_proposals, image_path, save=False)
 
         adv_results = self.get_pred(pertubed_image_bgr)
         adv_image = self.draw_dt_gt(
@@ -254,15 +269,15 @@ class AnalysisVisualizer(AAVisualizer):
             data_sample=adv_results,
             pred_score_thr=0.1)
 
-        vis_list = [noise_image, pertubed_image, adv_image]
-        title_list = ['r', 'pertubed image', 'attack results']
+        vis_list = [attack_proposals, r, r_total, pertubed_image, adv_image]
+        title_list = ['attack proposals', 'r', 'pertub', 'pertubed image', 'attack results']
 
         for i in range(col):
             plt.subplot(row, col, i + 1)
             plt.xticks([],[])
             plt.yticks([],[])
             if i == 0:
-                plt.ylabel(f"Step {round} results")
+                plt.ylabel(f"Step {customize_str} results")
             plt.title(f"{title_list[i]}", fontsize=10)
             plt.imshow(vis_list[i])
         
@@ -270,4 +285,5 @@ class AnalysisVisualizer(AAVisualizer):
         save_img_name = os.path.basename(image_path).split('.')[0]
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        plt.savefig(f'{save_path}/{save_img_name}-step{round}-mediate_result.jpg')
+        plt.savefig(f'{save_path}/{save_img_name}-step{customize_str}-mediate_result.jpg')
+        plt.clf()
