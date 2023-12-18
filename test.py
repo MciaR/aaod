@@ -325,4 +325,24 @@ from collections import Counter
 # output = nums[torch.arange(nums.shape[0]), idx]
 # print(output)
 
-print(torch.randint(0, 5, (100, )))
+def update_positive_indices(positive_indices, active_mask):
+    """
+    Update positive_indices based on active_mask.
+    Args:
+        positive_indices (torch.Tensor): The original mask with shape (5000,).
+        active_mask (torch.Tensor): The active mask with shape less than or equal to positive_indices.
+    Returns:
+        torch.Tensor: Updated positive_indices.
+    """
+    # 将 active_mask 映射回 positive_indices 的长度
+    expanded_active_mask = torch.ones_like(positive_indices, dtype=torch.bool)
+    expanded_active_mask[positive_indices] = active_mask
+
+    # 更新 positive_indices：两个 mask 的逻辑与
+    updated_positive_indices = positive_indices & expanded_active_mask
+
+    return updated_positive_indices
+
+positive_indices = torch.tensor([0, 0, 1, 0, 1]).bool()
+active_mask = torch.tensor([0, 1]).bool()
+print(update_positive_indices(positive_indices, active_mask))

@@ -82,15 +82,15 @@ CFG = {
     },
     'EFMR': {
         'attack_params': {
-            'gamma': 0.5,
-            'M': 500,
+            'gamma': 1,
+            'M': 200,
             'cfg_options': dict(
                 model = dict(
                     test_cfg = dict(
                         rpn=dict( # makes attack dense region.
-                        nms_pre=5000,
-                        max_per_img=5000,
-                        nms=dict(type='nms', iou_threshold=0.9),
+                        nms_pre=1000,
+                        max_per_img=1000,
+                        nms=dict(type='nms', iou_threshold=0.95),
                         min_bbox_size=0),
                         rcnn=None, # makes pred result no nms.
                     ),
@@ -175,4 +175,4 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='EFMR', model_name='FR_R101', dataset_name='COCO', exp_name='5000_anchors', start=0, end=1)
+    execute_attack(attacker_name='EFMR', model_name='FR_R101', dataset_name='COCO', exp_name='1000_anchors_remains_optimize_iou95', start=0, end=1)

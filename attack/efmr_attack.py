@@ -136,7 +136,7 @@ class EFMRAttack(BaseAttack):
 
             round += 1
 
-        keep = torch.tensor(keep)
+        keep = torch.tensor(keep, device=self.device)
         pred_bboxes = pred_bboxes[keep]
         pred_scores = pred_scores[keep]
         pred_labels = pred_labels[keep]
@@ -175,9 +175,9 @@ class EFMRAttack(BaseAttack):
         if C != pred_bboxes.shape[1]:
             valid_indices = (paired_label_idx < C - 1)
         else:
-            valid_indices = torch.ones_like(pred_scores).bool()
+            valid_indices = torch.ones_like(pred_scores, device=self.device).bool()
         pred_bboxes = pred_bboxes[valid_indices]
-        active_bboxes = pred_bboxes[torch.arange(len(pred_bboxes)), paired_label_idx[valid_indices]]
+        active_bboxes = pred_bboxes[torch.arange(len(pred_bboxes), device=self.device), paired_label_idx[valid_indices]]
         active_scores = pred_scores[valid_indices]
         active_labels = paired_label_idx[valid_indices]
 
@@ -189,7 +189,7 @@ class EFMRAttack(BaseAttack):
         # self.vis.visualize_bboxes(final_bboxes, data_sample.img_path, exp_name=_exp_name, labels=final_labels, scores=final_scores, distinguished_color=True)
 
         return active_bboxes, active_scores, active_labels, valid_indices, C
-
+    
     def get_adv_targets(self, clean_labels: torch.Tensor, num_classes: int):
         """Assign a set of correct labels to adversarial labels randomly.
         Args:
@@ -202,23 +202,24 @@ class EFMRAttack(BaseAttack):
         adv_labels = target2adv_labels[clean_labels]
         return adv_labels
     
-    def update_target_rpn_results(
-            self,
-            target_rpn_results,
-            remains,
-    ):
-        """Filter for active target_rpn_results (rpn proposals and labels).
-        Args:
-            target_rpn_results (List[DetDatasample]): Default length is 1.
-            remains (torch.tensor[bool]): filter flag for proposal_bboxes and its label.
+    def update_positive_indices(self, positive_indices, active_mask):
         """
-        active_rpn_instance = InstanceData()
-        active_rpn_instance.bboxes = target_rpn_results[0].bboxes[remains]
-        active_rpn_instance.labels = target_rpn_results[0].labels[remains]
+        Update positive_indices based on active_mask.
+        Args:
+            positive_indices (torch.Tensor): The original mask with shape (5000,).
+            active_mask (torch.Tensor): The active mask with shape less than or equal to positive_indices.
+        Returns:
+            torch.Tensor: Updated positive_indices.
+        """
+        # 将 active_mask 映射回 positive_indices 的长度
+        expanded_active_mask = torch.ones_like(positive_indices, dtype=torch.bool, device=self.device)
+        expanded_active_mask[positive_indices] = active_mask
 
-        target_rpn_results[0] = active_rpn_instance
+        # 更新 positive_indices：两个 mask 的逻辑与
+        updated_positive_indices = positive_indices & expanded_active_mask
 
-        return target_rpn_results
+        return updated_positive_indices
+
 
     def generate_adv_samples(self, x, data_sample, log_info=True):
         """Attack method to generate adversarial image.
@@ -266,15 +267,18 @@ class EFMRAttack(BaseAttack):
 
             # remain the correct targets, drop the incorrect i.e. successful attack targets.
             # active_target_idx &= (logits.argmax(dim=1) != adv_labels)
-            active_target_mask = positive_logtis.argmax(dim=1) != adv_labels
+            active_target_mask = (positive_logtis.argmax(dim=1) != adv_labels)
             active_logits = positive_logtis[active_target_mask]
+            target_labels = target_labels[active_target_mask]
+            adv_labels = adv_labels[active_target_mask]
+            positive_indices = self.update_positive_indices(positive_indices, active_target_mask)
             # if all targets has been attacked successfully, attack ends.
             if len(active_logits) == 0:
                 break
 
             # comput loss
-            correct_loss = loss_metric(active_logits, target_labels[active_target_mask])
-            adv_loss = loss_metric(active_logits, adv_labels[active_target_mask])
+            correct_loss = loss_metric(active_logits, target_labels)
+            adv_loss = loss_metric(active_logits, adv_labels)
             # decreasing adv_loss to make pertubed image predicted wrong, and increasing correct_loss to let result far from original correct labels.
             total_loss = adv_loss - correct_loss
 
