@@ -4,6 +4,7 @@ import numpy as np
 import mmcv
 import copy
 
+from typing import List
 from attack import BaseAttack
 from visualizer import AnalysisVisualizer
 from PIL import Image
@@ -17,16 +18,14 @@ class EFMRAttack(BaseAttack):
         M (float): SGD total step.
     """
     def __init__(self, 
-                 cfg_options,
                  cfg_file, 
                  ckpt_file,
+                 cfg_options,
                  exp_name=None,
                  gamma=0.5,
                  M=500,
                  device='cuda:0') -> None:
-        assert cfg_options is not None, \
-            f'`cfg_options` cannot be `None` for DAG Attack.'
-        super().__init__(cfg_file, ckpt_file, device=device, cfg_options=cfg_options, exp_name=exp_name,
+        super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=cfg_options,
                          attack_params=dict(gamma=gamma, M=M))
         self.vis = AnalysisVisualizer(cfg_file=self.cfg_file, ckpt_file=self.ckpt_file)
         
@@ -86,119 +85,111 @@ class EFMRAttack(BaseAttack):
         data['inputs'] = clean_image
         # forward the model
         with torch.no_grad():
-            # results = self.model.predict(x, batch_data_samples=data['data_samples'])[0]
-            batch_data_samples = data['data_samples']
-            batch_inputs = data['inputs']
+            results = self.model.predict(clean_image, batch_data_samples=data['data_samples'])[0]
 
-            x = self.model.extract_feat(batch_inputs)
-            # If there are no pre-defined proposals, use RPN to get proposals
-            rpn_results_list_rescale = self.model.rpn_head.predict(
-                x, batch_data_samples, rescale=True) # rescale to origin image size.
-            
-            rpn_results_list = self.model.rpn_head.predict(
-                x, batch_data_samples, rescale=False)
-            
-            results_list = self.model.roi_head.predict(
-                x, rpn_results_list, batch_data_samples, rescale=True)
-
-            batch_data_samples = self.model.add_pred_to_datasample(
-                batch_data_samples, results_list)
-            
-        proposal_bboxes = rpn_results_list_rescale[0].bboxes
-        pred_scores = batch_data_samples[0].pred_instances.scores
-        gt_bboxes = batch_data_samples[0].gt_instances.bboxes.to(self.device) # gt_bboxes is also original image size.
-        gt_labels = batch_data_samples[0].gt_instances.labels.to(self.device)
-        num_classes = pred_scores.shape[1]
-
-        # use rescaled bbox to select positive proposals.
-        # _base_exp_name = f'{self.get_attack_name()}/{self.exp_name}'
-        # self.vis.visualize_bboxes(proposal_bboxes, batch_data_samples[0].img_path, exp_name=f'proposal_show/{_base_exp_name}', customize_str='original')
-        _, positive_labels, remains, positive_proposal2gt_idx = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
-        # self.vis.visualize_bboxes(proposal_bboxes[remains], batch_data_samples[0].img_path, exp_name=f'proposal_show/{_base_exp_name}', customize_str='filtered')
-        # self.vis.visualize_category_amount(proposal_bboxes[remains], gt_bboxes, positive_proposal2gt_idx, batch_data_samples[0].img_path, exp_name=f'gt2proposal_amount/{_base_exp_name}')
-
-        # get un-rescaled bbox and corresponding scores
-        active_rpn_instance = InstanceData()
-        active_rpn_instance.bboxes = rpn_results_list[0].bboxes[remains] # rescaled, not original image size.
-        active_rpn_instance.labels = rpn_results_list[0].labels[remains]
-
-        rpn_results_list[0] = active_rpn_instance
-
-        return rpn_results_list, positive_labels, num_classes, rpn_results_list_rescale[0].bboxes[remains] # for analysis process of proposal attacking.
+        return self.select_positive_targets(results.pred_instances.bboxes, results.pred_instances.scores, data['data_samples'][0])
     
-    @staticmethod
-    def pairwise_iou(bboxes1, bboxes2):
-        """Calculate each pair iou in bboxes1 and bboxes2.
+    def nms(self, pred_bboxes, pred_scores, pred_labels, iou_thr=0.5, score_thr=0.3):
+        """bboxes non-maxmium supression post processing.
         Args:
-            bboxes1 (torch.Tensor): shape is (N, 4)
-            bboxes2 (torch.Tensor): shape is (M, 4)
+            pred_bboxes (torch.Tensor): pred bboxes, shape is (N, 4).
+            pred_scores (torch.Tensor): pred scores, shape is (N, 1).
+            pred_labels (torch.Tensor): pred labels, shape is (N, 1).
+            iou_thr (float): remove bboxes whose iou with target > iou_thr.
+            scores_thr (float): remove bboxes whose scores < scores_thr.
         Returns:
-            paired_ious (torh.Tensor): shape is (N, M)
+            result_bboxes (torch.Tensor): bboxes after nms.
+            result_scores (torch.Tensor): scores after nms.
         """
-        N, M = bboxes1.shape[0], bboxes2.shape[0]
-        area1 = (bboxes1[:, 2] - bboxes1[:, 0]) * (bboxes1[:, 3] - bboxes1[:, 1])
-        area2 = (bboxes2[:, 2] - bboxes2[:, 0]) * (bboxes2[:, 3] - bboxes2[:, 1])
 
-        ious = []
+        x1 = pred_bboxes[:, 0]
+        y1 = pred_bboxes[:, 1]        
+        x2 = pred_bboxes[:, 2]
+        y2 = pred_bboxes[:, 3]
+        areas = (x2 - x1) * (y2 - y1)
 
-        for i in range(N):
-            bbox1 = bboxes1[i]
-            xmin = torch.max(bbox1[0], bboxes2[:, 0])
-            ymin = torch.max(bbox1[1], bboxes2[:, 1])
-            xmax = torch.min(bbox1[2], bboxes2[:, 2])
-            ymax = torch.min(bbox1[3], bboxes2[:, 3])
+        sorted_idx = torch.argsort(pred_scores, descending=True)
+        round = 0
+        keep = []
 
-            w = torch.clamp(xmax - xmin, min=0)
-            h = torch.clamp(ymax - ymin, min=0)
-            inter = w * h 
-            iou = inter / (area1[i] + area2 - inter)
-            ious.append(iou)
+        while len(sorted_idx):
+            # max score bboxes
+            i = sorted_idx[0]
+            keep.append(i)
 
-        ious = torch.stack(ious, dim=0)
-        return ious
+            if len(sorted_idx) == 1:
+                break
 
-    
-    def select_positive_proposals(
+            inter_xmin = torch.maximum(x1[i], x1[sorted_idx[1:]])
+            inter_ymin = torch.maximum(y1[i], y1[sorted_idx[1:]])
+            inter_xmax = torch.minimum(x2[i], x2[sorted_idx[1:]])
+            inter_ymax = torch.minimum(y2[i], y2[sorted_idx[1:]])
+
+            w = torch.clamp(inter_xmax - inter_xmin, 0.)
+            h = torch.clamp(inter_ymax - inter_ymin, 0.)
+
+            inter_area = w * h
+            ious = inter_area / (areas[i] + areas[sorted_idx[1:]] - inter_area)
+            
+            idx = torch.where(ious <= iou_thr)[0]
+            sorted_idx = sorted_idx[idx + 1]
+
+            round += 1
+
+        keep = torch.tensor(keep)
+        pred_bboxes = pred_bboxes[keep]
+        pred_scores = pred_scores[keep]
+        pred_labels = pred_labels[keep]
+
+        valid_indices = (pred_scores >= score_thr)
+        pred_bboxes = pred_bboxes[valid_indices]
+        pred_scores = pred_scores[valid_indices]
+        pred_labels = pred_labels[valid_indices]
+
+        return pred_bboxes, pred_scores, pred_labels
+
+
+    def select_positive_targets(
             self,
-            proposal_bboxes: torch.Tensor, 
-            pred_scores: torch.Tensor, 
-            gt_bboxes: torch.Tensor, 
-            gt_labels: torch.Tensor):
+            pred_bboxes,
+            pred_scores,
+            data_sample,
+            iou_thr=0.7,
+            score_thr=0.1,
+            ):
         """Select high-quality targets for Attack.
         Args:
-            proposal_bboxes (torch.Tensor): pred bboxes, shape is (proposal_num, 80 * 4).
+            pred_bboxes (torch.Tensor): pred bboxes, shape is (proposal_num, 80 * 4).
             pred_scores (torch.Tensor): pred scores, shape is (proposal_num, 80 + 1).
-            gt_bboxes (torch.Tensor): gt bboxes, shape is (gt_num, 4).
-            gt_labels (torch.Tensor): gt bboxes, shape is (gt_num, 1).
+            iou_thr (float): iou filter condition.
+            score_thr (float): score filter condition.
         Returns:
             positive_bboxes (torch.Tensor): remaining high quality targets bboxes.
             positive_scores (torch.Tensor): remaining high quality targets scores.
             remains (torch.Tensor[bool]): filter flag for proposal_bboxes and its label.
         """
-        # cal iou
-        ious = self.pairwise_iou(proposal_bboxes, gt_bboxes)
+        N, C = pred_scores.shape
+        pred_scores, paired_label_idx = pred_scores.max(dim=-1)
+        pred_bboxes = pred_bboxes.reshape(N, -1, 4)
+        # that means has background class.
+        if C != pred_bboxes.shape[1]:
+            valid_indices = (paired_label_idx < C - 1)
+        else:
+            valid_indices = torch.ones_like(pred_scores).bool()
+        pred_bboxes = pred_bboxes[valid_indices]
+        active_bboxes = pred_bboxes[torch.arange(len(pred_bboxes)), paired_label_idx[valid_indices]]
+        active_scores = pred_scores[valid_indices]
+        active_labels = paired_label_idx[valid_indices]
 
-        # find the max iou gt_bboxes for each proposal_bboxes, 
-        # that means every proposal_bboxes just has one gt_bboxes to pair.
-        paired_ious, paired_gt_idx = ious.max(dim=1)
+        # _exp_name = f'effective_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # self.vis.visualize_bboxes(active_bboxes, data_sample.img_path, exp_name=_exp_name, labels=active_labels, scores=active_scores, distinguished_color=True)
+        # final_bboxes, final_scores, final_labels = self.nms(active_bboxes, active_scores, active_labels)
 
-        # Filter for ious > 0.1
-        iou_remains = paired_ious > 0.1
+        # _exp_name = f'nmsed_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # self.vis.visualize_bboxes(final_bboxes, data_sample.img_path, exp_name=_exp_name, labels=final_labels, scores=final_scores, distinguished_color=True)
 
-        # Filter for score of proposal > 0.1
-        # NOTE: Below 2 sentence is equals to `label_idx = gt_labels[paired_gt_idx].`
-        # cls_idx_repeat = gt_labels.repeat(proposal_num, 1)
-        # label_idx = cls_idx_repeat[torch.arange(proposal_num), paired_gt_idx]
-        label_idx = gt_labels[paired_gt_idx] # (proposal_num, 1) get the label indices of gt bboxes which paired to proposal_bboxes.
-        paired_scores = pred_scores[torch.arange(pred_scores.shape[0]), label_idx] # (proposal_num, 1) get the scores corresponding to paried bboxes.
-        score_remains = paired_scores > 0.1
+        return active_bboxes, active_scores, active_labels, valid_indices, C
 
-        # Filter for positive proposals and their correspoinding gt labels
-        remains = iou_remains & score_remains
-
-        return proposal_bboxes[remains], label_idx[remains], remains, paired_gt_idx[remains]
-
-    
     def get_adv_targets(self, clean_labels: torch.Tensor, num_classes: int):
         """Assign a set of correct labels to adversarial labels randomly.
         Args:
@@ -207,8 +198,8 @@ class EFMRAttack(BaseAttack):
         """
         # add a random num which range from [1, num_classes] to clean_labels and mod 81, then we get the adv_labels.
         # that makes adv_labels[i] != clean_labels[i], and every element in adv_labels range from [0, num_classes]
-        adv_labels = (clean_labels + torch.randint(1, num_classes, (clean_labels.shape[0], ), device=self.device)) % num_classes
-
+        target2adv_labels = (torch.arange(0, num_classes, device=self.device) + torch.randint(1, num_classes, (num_classes, ), device=self.device)) % num_classes
+        adv_labels = target2adv_labels[clean_labels]
         return adv_labels
     
     def update_target_rpn_results(
@@ -249,8 +240,8 @@ class EFMRAttack(BaseAttack):
         data['data_samples'][0].gt_instances = data_sample.gt_instances
         batch_data_samples = data['data_samples']
 
-        # get target labels and proposal bboxes which from RPN
-        target_rpn_results, target_labels, num_classes, attack_proposals_img_scale = self.get_targets(clean_image, data)
+        # get targets from predict
+        target_bboxes, target_scores, target_labels, positive_indices, num_classes = self.get_targets(clean_image, data)
         # get adv labels
         adv_labels = self.get_adv_targets(target_labels, num_classes=num_classes)
 
@@ -265,35 +256,25 @@ class EFMRAttack(BaseAttack):
         if log_info:
             print(f'Start generating adv, total rpn proposal: {total_targets}.')
 
-        # record attack process of proposals
-        accum_proposals = []
-
         while step < self.M:
 
             # get features
-            features = self.model.extract_feat(pertubed_image)
-
-            predict_list = self.model.roi_head.predict(
-                features, target_rpn_results, batch_data_samples, rescale=True)
+            results = self.model.predict(pertubed_image, batch_data_samples)
             
-            logits = predict_list[0].scores
+            logits = results[0].pred_instances.scores
+            positive_logtis = logits[positive_indices] # logits corresponding with targets and advs.
 
             # remain the correct targets, drop the incorrect i.e. successful attack targets.
             # active_target_idx &= (logits.argmax(dim=1) != adv_labels)
-            active_target_idx = logits.argmax(dim=1) != adv_labels
-
-            active_logits = logits[active_target_idx]
-            target_labels = target_labels[active_target_idx]
-            adv_labels = adv_labels[active_target_idx]
-            target_rpn_results = self.update_target_rpn_results(target_rpn_results, active_target_idx)
-
+            active_target_mask = positive_logtis.argmax(dim=1) != adv_labels
+            active_logits = positive_logtis[active_target_mask]
             # if all targets has been attacked successfully, attack ends.
-            if len(target_labels) == 0:
+            if len(active_logits) == 0:
                 break
 
             # comput loss
-            correct_loss = loss_metric(active_logits, target_labels)
-            adv_loss = loss_metric(active_logits, adv_labels)
+            correct_loss = loss_metric(active_logits, target_labels[active_target_mask])
+            adv_loss = loss_metric(active_logits, adv_labels[active_target_mask])
             # decreasing adv_loss to make pertubed image predicted wrong, and increasing correct_loss to let result far from original correct labels.
             total_loss = adv_loss - correct_loss
 
@@ -310,21 +291,16 @@ class EFMRAttack(BaseAttack):
             pertubed_image_grad.zero_()
             self.model.zero_grad()
 
-            attacked_this_round_proposals = attack_proposals_img_scale[~active_target_idx]
-            accum_proposals.append(attacked_this_round_proposals)
-
             if step % 10 == 0 and log_info:
-                print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (total_targets - len(target_labels)) / total_targets * 100))
-                _exp_name = f'{self.get_attack_name()}/{self.exp_name}'
-                self.vis.visualize_intermediate_results(r=self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0]),
-                                                        r_total = self.reverse_augment(x=pertubed_image.squeeze()-clean_image.squeeze(), datasample=data['data_samples'][0]),
-                                                        pertubed_image=self.reverse_augment(x=pertubed_image.squeeze(), datasample=data['data_samples'][0]),
-                                                        customize_str=step,
-                                                        attack_proposals=torch.cat(accum_proposals, dim=0),
-                                                        image_path=data['data_samples'][0].img_path,
-                                                        exp_name=_exp_name)
-                accum_proposals = []
-            attack_proposals_img_scale = attack_proposals_img_scale[active_target_idx] # for analysis process of proposal attacking    
+                print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (total_targets - len(active_logits)) / total_targets * 100))
+                # _exp_name = f'{self.get_attack_name()}/{self.exp_name}'
+                # self.vis.visualize_intermediate_results(r=self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0]),
+                #                                         r_total = self.reverse_augment(x=pertubed_image.squeeze()-clean_image.squeeze(), datasample=data['data_samples'][0]),
+                #                                         pertubed_image=self.reverse_augment(x=pertubed_image.squeeze(), datasample=data['data_samples'][0]),
+                #                                         customize_str=step,
+                #                                         attack_proposals=torch.cat(accum_proposals, dim=0),
+                #                                         image_path=data['data_samples'][0].img_path,
+                #                                         exp_name=_exp_name)
             step += 1
 
         # 这里用了squeeze实际上是只作为一张图片

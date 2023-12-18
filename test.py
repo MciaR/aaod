@@ -325,6 +325,4 @@ from collections import Counter
 # output = nums[torch.arange(nums.shape[0]), idx]
 # print(output)
 
-a = torch.tensor([[1, 2], [1, 1]])
-b = torch.tensor([[1, 2], [1, 1]])
-print(torch.cat([a, b], dim=0))
+print(torch.randint(0, 5, (100, )))

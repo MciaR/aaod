@@ -116,7 +116,7 @@ class AnalysisVisualizer(AAVisualizer):
         plt.savefig(f'{save_path}/{save_img_name}.jpg')
         plt.clf()
 
-    def visualize_bboxes(self, bboxes, image_path, exp_name=None, customize_str=None, labels=None, scores=None, save=True):
+    def visualize_bboxes(self, bboxes, image_path, exp_name=None, customize_str=None, labels=None, scores=None, save=True, distinguished_color=False):
         """Drawing bboxes into the image.
         Args:
             bboxes (torch.Tensor | np.ndarray): format is xyxy, and shape is (N, 4).
@@ -126,15 +126,18 @@ class AnalysisVisualizer(AAVisualizer):
             labels (torch.Tensor | np.ndarray): bboxes' labels, shape is (N, 1). Default `None`.
             scores (torch.Tensor | np.ndarray): bboxes' scores, shape is (N, 1). Default `None`.
             save (bool): whether save the drawing result. Default `True`.
+            distinguished_color (bool): wheter assign different color to different labels. Defalut `False`.
         """
         if isinstance(bboxes, torch.Tensor):
             bboxes = bboxes.detach().cpu().numpy()
         if labels is not None and isinstance(labels, torch.Tensor):
             labels = labels.detach().cpu().numpy()
         if scores is not None and isinstance(scores, torch.Tensor):
-            scores = scores.detach().cpu().numpy()        
+            scores = scores.detach().cpu().numpy()
+        if distinguished_color:
+            assert labels is not None, \
+                f'`labels` must be given if `distinguished_color` is `True`.'        
         classes = self.dataset_meta['classes']
-
         # load image
         image = Image.open(image_path)
         draw = ImageDraw.Draw(image)
@@ -143,7 +146,15 @@ class AnalysisVisualizer(AAVisualizer):
 
         # Draw each bbox
         for i, bbox in enumerate(bboxes):
-            draw.rectangle([(bbox[0], bbox[1]), (bbox[2], bbox[3])], width=1, outline=self.color_panel[0])
+
+            if distinguished_color:
+                bbox_color = self.color_panel[labels[i]]
+                text_color = bbox_color
+            else:
+                bbox_color = self.color_panel[0]
+                text_color = "white"
+
+            draw.rectangle([(bbox[0], bbox[1]), (bbox[2], bbox[3])], width=1, outline=bbox_color)
 
             # Prepare label and scroe text
             label_text = ''
@@ -153,9 +164,12 @@ class AnalysisVisualizer(AAVisualizer):
                 label_text += f'{scores[i]: .2f}'
 
             if label_text:
-                draw.text((bbox[0], bbox[1]), label_text, fill="white")
+                draw.text((bbox[0], bbox[1]), label_text, fill=text_color)
         
         if save:
+            plt.clf()
+            plt.figure(figsize=(6, 4), dpi=300)
+
             save_path = os.path.join(self.save_dir, exp_name) if exp_name else self.save_dir
             save_img_name = os.path.basename(image_path).split('.')[0]
             if not os.path.exists(save_path):
@@ -167,7 +181,7 @@ class AnalysisVisualizer(AAVisualizer):
                 plt.savefig(f'{save_path}/{customize_str}-{save_img_name}-{self.get_timestamp()}.jpg')
             else:
                 plt.savefig(f'{save_path}/{save_img_name}-{self.get_timestamp()}.jpg')
-        plt.clf()
+            plt.clf()
 
         return np.array(image)
 
