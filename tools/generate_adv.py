@@ -59,8 +59,28 @@ ATTACK_PARAMS = {
             'constrain': 'consine_sim', # distance 似乎也不错，但consine_sim的噪声更小
         },
     },
-    'HEFMA': {
-
+    'EXPDAG': {
+        'attack_params': {
+            # NOTE: best for now, 2023.12.18
+            # 'cfg_file': "configs/fr_vgg16_coco.py", 
+            # 'ckpt_file': "pretrained/fr_vgg16_coco.pth",
+            'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
+            'ckpt_file': "pretrained/fr_r101_coco.pth",
+            'gamma': 0.5,
+            'M': 500,
+            'cfg_options': dict(
+                model = dict(
+                    test_cfg = dict(
+                        rpn=dict( # makes attack dense region.
+                        nms_pre=5000,
+                        max_per_img=5000,
+                        nms=dict(type='nms', iou_threshold=0.9),
+                        min_bbox_size=0),
+                        rcnn=None, # makes pred result no nms.
+                    ),
+                )
+            )
+        }
     },
     'DAG': {
         'attack_params': {
@@ -95,11 +115,11 @@ IMAGE_PATH_PREFIX = {
     'VOC': None,
 }
 
-def generate_and_save(img_list, model, dataset, attacker_name, device):
-    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'HEFMA', 'DAG']
+def generate_and_save(dataset, model, dataset_name, attacker_name, device):
+    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset_name in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'EXPDAG', 'DAG']
 
-    model_config_path = MODEL_CFG_PREFIX[model] + DATASET_SUFFIX[dataset] + '.py'
-    checkpoint_file_path = CKPT_FILE_PREFIX[model] + DATASET_SUFFIX[dataset] + '.pth'
+    model_config_path = MODEL_CFG_PREFIX[model] + DATASET_SUFFIX[dataset_name] + '.py'
+    checkpoint_file_path = CKPT_FILE_PREFIX[model] + DATASET_SUFFIX[dataset_name] + '.pth'
     attack_params = ATTACK_PARAMS[attacker_name]['attack_params']
 
     attack_params.update({'cfg_file': model_config_path, 'ckpt_file': checkpoint_file_path})
@@ -108,14 +128,14 @@ def generate_and_save(img_list, model, dataset, attacker_name, device):
         attacker = FMRAttack(**attack_params, device=device)
     elif attacker_name == 'THA':
         attacker = THAAttack(**attack_params, device=device)
-    elif attacker_name == 'HEFMA':
-        attacker = HEFMAAttack(**attack_params, device=device)
+    elif attacker_name == 'EXPDAG':
+        attacker = EXPDAGAttack(**attack_params, device=device)
     elif attacker_name == 'DAG':
         attacker = DAGAttack(**attack_params, device=device)
 
-    image_root = IMAGE_ROOT[dataset]
-    adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset], attacker_name, 'adv', model + '_tiny')
-    pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset], attacker_name, 'pertub', model + '_tiny')
+    image_root = IMAGE_ROOT[dataset_name]
+    adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model + '_tiny')
+    pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model + '_tiny')
 
     if not os.path.exists(adv_save_dir):
         os.makedirs(adv_save_dir)
@@ -140,15 +160,15 @@ if __name__ == "__main__":
     
     # params
     model = 'FR_R101'
-    dataset = 'COCO'
+    dataset_name = 'COCO'
     attacker_name = 'DAG'
 
-    image_list = os.listdir(IMAGE_ROOT[dataset])
+    image_list = os.listdir(IMAGE_ROOT[dataset_name])
     img_l1 = image_list[:250]
     img_l2 = image_list[250:]
 
-    p1 = Process(target=generate_and_save, args=(img_l1, model, dataset, attacker_name, 'cuda:0'))
-    p2 = Process(target=generate_and_save, args=(img_l2, model, dataset, attacker_name, 'cuda:1'))
+    p1 = Process(target=generate_and_save, args=(img_l1, model, dataset_name, attacker_name, 'cuda:0'))
+    p2 = Process(target=generate_and_save, args=(img_l2, model, dataset_name, attacker_name, 'cuda:1'))
     # start
     p1.start()
     p2.start()
