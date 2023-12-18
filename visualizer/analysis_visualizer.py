@@ -224,3 +224,49 @@ class AnalysisVisualizer(AAVisualizer):
         plt.xticks(rotation=45)
         plt.title('Proposals amount of gt bboxes')
         plt.savefig(f'{save_path}/{save_img_name}-bar_figure-{self.get_timestamp()}.jpg')
+
+    def visualize_intermediate_results(self, r, pertubed_image, round, image_path):
+        """Visualize the intermediate results.
+        Args:
+            r (np.ndarray): noise or gradient of pertubed image of this round, color channel: RGB.
+            pertubed_image (np.ndarray): pertubed image for now, color channel: RGB.
+            round (int): round of adversarial generating for now.
+            image_path (str): path of image.
+        """
+        assert isinstance(r, np.ndarray) and isinstance(pertubed_image, np.ndarray), \
+            f'`r` and `pertubed_image` must be type of `np.ndarray`.'
+        
+        row, col = (1, 3)
+        plt.figure(frameon=False, figsize=(3*row, 3*col), dpi=300)
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+        
+        # convert RGB to BGR, cuz preprocess has processing of BGR2RGB,
+        # that makes consistent result to pass a saved image to model.
+        noise_image = r.astype(np.uint8)[[2, 1, 0], ...]
+        pertubed_image = pertubed_image.astype(np.uint8)[[2, 1, 0], ...]
+
+        adv_results = self.get_pred(pertubed_image)
+        adv_image = self.visualizer.draw_dt_gt(
+            name='attack',
+            image=pertubed_image,
+            draw_gt=False,
+            data_sample=adv_results,
+            pred_score_thr=0.1)
+
+        vis_list = [noise_image, pertubed_image, adv_image]
+        title_list = ['r', 'pertubed image', 'attack results']
+
+        for i in range(col):
+            plt.subplot(row, col, i + 1)
+            plt.xticks([],[])
+            plt.yticks([],[])
+            if i == 0:
+                plt.ylabel(f"Step {round} results")
+            plt.title(f"{title_list[i]}", fontsize=10)
+            plt.imshow(vis_list[i])
+        
+        save_path = os.path.join(self.save_dir, 'intermediate_results')
+        save_img_name = os.path.basename(image_path).split('.')[0]
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        plt.savefig(f'{save_path}/{save_img_name}-step{round}-mediate_result.jpg')
