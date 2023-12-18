@@ -147,18 +147,19 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     start_idx = int(start * len(dataset))
     end_idx = int(end * len(dataset))
 
-    for data in tqdm(dataset[start_idx:end_idx]):
+    for i in tqdm(range(start_idx, end_idx)):
+        data = dataset[i]
         data_sample = data['data_samples']
-        img = data_sample.img_path
-        img_path = os.path.join(image_root, img)
+        img_path = data_sample.img_path
+        img_name = os.path.basename(img_path)
 
         pertub, adv = attacker.generate_adv_samples(x=img_path, data_sample=data_sample, log_info=False)
 
         adv_image = Image.fromarray(adv.astype(np.uint8))
         pertub_image = Image.fromarray(pertub.astype(np.uint8))
 
-        adv_image.save(os.path.join(adv_save_dir, img))
-        pertub_image.save(os.path.join(pertub_save_dir, img))
+        adv_image.save(os.path.join(adv_save_dir, img_name))
+        pertub_image.save(os.path.join(pertub_save_dir, img_name))
 
 
 if __name__ == "__main__":
