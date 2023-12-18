@@ -87,7 +87,7 @@ ATTACK_PARAMS = {
             'cfg_file': "configs/faster_rcnn_r101_fpn_coco.py", 
             'ckpt_file': "pretrained/fr_r101_coco.pth",
             'gamma': 0.5,
-            'M': 200,
+            'M': 500,
             'cfg_options': dict(
                 model = dict(
                     test_cfg = dict(
@@ -102,12 +102,6 @@ ATTACK_PARAMS = {
             )
         }
     }
-}
-
-IMAGE_ROOT = {
-    # 'COCO': 'data/coco2017/images/val2017', 
-    'COCO': 'data/tiny_coco2017/images/val2017', # tiny for debug now.
-    'VOC': None,
 }
 
 IMAGE_PATH_PREFIX = {
@@ -133,7 +127,6 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     elif attacker_name == 'DAG':
         attacker = DAGAttack(**attack_params, device=device)
 
-    image_root = IMAGE_ROOT[dataset_name]
     adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model + '_tiny')
     pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model + '_tiny')
 
