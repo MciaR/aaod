@@ -128,7 +128,7 @@ IMAGE_PATH_PREFIX = {
 }
 
 def generate_and_save(start, end, model, dataset_name, attacker_name, device):
-    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset_name in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'EXPDAG', 'DAG']
+    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset_name in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'EXPDAG', 'DAG', 'EFMR']
 
     model_config_path = MODEL_CFG_PREFIX[model] + DATASET_SUFFIX[dataset_name] + '.py'
     checkpoint_file_path = CKPT_FILE_PREFIX[model] + DATASET_SUFFIX[dataset_name] + '.pth'
@@ -144,6 +144,8 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
         attacker = EXPDAGAttack(**attack_params, device=device)
     elif attacker_name == 'DAG':
         attacker = DAGAttack(**attack_params, device=device)
+    elif attacker_name == 'EFMR':
+        attacker = EFMRAttack(**attack_params, device=device)
 
     adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model + '_tiny')
     pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model + '_tiny')
@@ -183,7 +185,7 @@ if __name__ == "__main__":
     # params
     model = 'FR_R101'
     dataset_name = 'COCO'
-    attacker_name = 'DAG'
+    attacker_name = 'EFMR'
 
     # must know dataset length
     p1 = Process(target=generate_and_save, args=(0, 0.5, model, dataset_name, attacker_name, 'cuda:0'))
