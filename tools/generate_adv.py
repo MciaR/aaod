@@ -140,7 +140,10 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     start_idx = int(start * len(dataset))
     end_idx = int(end * len(dataset))
 
-    for i in tqdm(range(start_idx, end_idx)):
+    iterations = tqdm(range(start_idx, end_idx))
+    for i in iterations:
+        iterations.set_description(f'{device} generating {i}th image')
+
         data = dataset[i]
         data_sample = data['data_samples']
         img_path = data_sample.img_path
