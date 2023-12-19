@@ -101,7 +101,25 @@ ATTACK_PARAMS = {
                 )
             )
         }
-    }
+    },
+    'EFMR': {
+        'attack_params': { # NOTE: Best for fr now: 2023.12.19, 现在攻击的结果有一点点没攻击干净（只有一两个物体，但score下降了）。
+            'gamma': 0.7, # controls noise strength
+            'M': 150, # controls iterations (time consuming)
+            'cfg_options': dict(
+                model = dict(
+                    test_cfg = dict(
+                        rpn=dict( # makes attack dense region.
+                        nms_pre=1000, # nms pre should > max_per_img, otherwise after nms, there will be less than max_per_img. i.e. there are less that max_per_img for rcnn.
+                        max_per_img=500,
+                        nms=dict(type='nms', iou_threshold=0.99),
+                        min_bbox_size=0),
+                        rcnn=None, # makes pred result no nms.
+                    ),
+                )
+            )
+        }
+    },
 }
 
 IMAGE_PATH_PREFIX = {
@@ -147,15 +165,16 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
         data = dataset[i]
         data_sample = data['data_samples']
         img_path = data_sample.img_path
-        img_name = os.path.basename(img_path)
+        img_name = os.path.basename(img_path).split('.')[0]
 
         pertub, adv = attacker.generate_adv_samples(x=img_path, data_sample=data_sample, log_info=False)
 
         adv_image = Image.fromarray(adv.astype(np.uint8))
         pertub_image = Image.fromarray(pertub.astype(np.uint8))
 
-        adv_image.save(os.path.join(adv_save_dir, img_name))
-        pertub_image.save(os.path.join(pertub_save_dir, img_name))
+        # jpg will compress noise to make attack weaker.
+        adv_image.save(os.path.join(adv_save_dir, img_name + '.png'))
+        pertub_image.save(os.path.join(pertub_save_dir, img_name + '.png'))
 
 
 if __name__ == "__main__":
