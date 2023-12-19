@@ -243,20 +243,34 @@ class EXPDAGAttack(BaseAttack):
             noise (np.ndarray | torch.Tensor): niose which add to clean image.
             adv (np.ndarray | torch.Tensor): adversarial image.
         """
-        # initialize r
+        # initialize data
         data = self.get_data_from_img(img=x)
         clean_image = data['inputs']
         data['data_samples'][0].gt_instances = data_sample.gt_instances
         batch_data_samples = data['data_samples']
 
+        # pertubed image, `X_m` in paper
+        pertubed_image = clean_image.clone()
+        pertubed_image.requires_grad = True
+
+        # deal with no gt's data
+        if len(data['data_samples'][0].gt_instances.bboxes) == 0:
+
+            adv_tensor = clean_image.squeeze()
+            pertub_tensor = torch.zeros_like(adv_tensor, device=self.device)
+
+            adv_image = self.reverse_augment(x=adv_tensor, datasample=data['data_samples'][0])
+            pertub_image = self.reverse_augment(x=pertub_tensor, datasample=data['data_samples'][0])
+
+            if log_info:
+                print(f"Image has no gt bboxes, skip this image.")
+
+            return pertub_image, adv_image
+
         # get target labels and proposal bboxes which from RPN
         target_rpn_results, target_labels, num_classes, attack_proposals_img_scale = self.get_targets(clean_image, data)
         # get adv labels
         adv_labels = self.get_adv_targets(target_labels, num_classes=num_classes)
-
-        # pertubed image, `X_m` in paper
-        pertubed_image = clean_image.clone()
-        pertubed_image.requires_grad = True
 
         step = 0
         total_targets = len(target_labels)
