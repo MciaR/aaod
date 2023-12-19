@@ -12,8 +12,8 @@ from mmengine.structures import InstanceData
 from torch.optim.lr_scheduler import StepLR
 
 
-class EFMRAttack(BaseAttack):
-    """Enhanced Feature Map Regression Attack. 
+class PPAttack(BaseAttack):
+    """Pipline Attack (i.e. Enhanced Feature Representation Mean Regression Attack). 
         gamma (float): scale factor of normalizing noise `r`.
         M (float): SGD total step.
     """
@@ -24,11 +24,9 @@ class EFMRAttack(BaseAttack):
                  exp_name=None,
                  gamma=0.5,
                  M=500,
-                 attack_target: dict = None,
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=cfg_options,
                          attack_params=dict(gamma=gamma, M=M))
-        self.attack_target = attack_target
         self.vis = AnalysisVisualizer(cfg_file=self.cfg_file, ckpt_file=self.ckpt_file)
         
     def reverse_augment(self, x, datasample):
@@ -201,10 +199,6 @@ class EFMRAttack(BaseAttack):
         # add a random num which range from [1, num_classes] to clean_labels and mod 81, then we get the adv_labels.
         # that makes adv_labels[i] != clean_labels[i], and every element in adv_labels range from [0, num_classes]
         target2adv_labels = (torch.arange(0, num_classes, device=self.device) + torch.randint(1, num_classes, (num_classes, ), device=self.device)) % num_classes
-        # update attack target
-        if self.attack_target is not None:
-            for key, value in self.attack_target.items():
-                target2adv_labels[key] = value
         adv_labels = target2adv_labels[clean_labels]
         return adv_labels
     
