@@ -100,14 +100,14 @@ CFG = {
         'remain_list': ['gamma', 'M']
     },
     'EFMR': {
-        'attack_params': { # NOTE: Best for fr now: 2023.12.19
-            'gamma': 1,
-            'M': 200,
+        'attack_params': { # NOTE: Best for fr now: 2023.12.19, 现在攻击的结果有一点点没攻击干净（只有一两个物体，但score下降了）。
+            'gamma': 0.7, # controls noise strength
+            'M': 150, # controls iterations (time consuming)
             'cfg_options': dict(
                 model = dict(
                     test_cfg = dict(
                         rpn=dict( # makes attack dense region.
-                        nms_pre=500,
+                        nms_pre=1000, # nms pre should > max_per_img, otherwise after nms, there will be less than max_per_img. i.e. there are less that max_per_img for rcnn.
                         max_per_img=500,
                         nms=dict(type='nms', iou_threshold=0.99),
                         min_bbox_size=0),
