@@ -68,6 +68,10 @@
 # _img = Image.open('test.png')
 # _img_np = np.array(_img)
 
+# _img_jpg = Image.open('test.jpg')
+# _img_jpg_np = np.array(_img_jpg)
+# print(_img_jpg_np == _img_np)
+
 # cv2.imwrite('test_cv2.png', img_np)
 # cv_img_np = cv2.imread('test_cv2.png')
 
@@ -304,9 +308,9 @@
 
 # print(pairwise_iou(bboxes1, bboxes2).shape)
 
-import numpy as np
-import torch
-from collections import Counter
+# import numpy as np
+# import torch
+# from collections import Counter
 # M = 3, N = 5
 # pred_scores = torch.tensor([[0.1, 0.9], [0.4, 0.6], [0.3, 0.7]])
 # paired_idx = torch.tensor([2, 1, 4])
@@ -325,24 +329,25 @@ from collections import Counter
 # output = nums[torch.arange(nums.shape[0]), idx]
 # print(output)
 
-def update_positive_indices(positive_indices, active_mask):
-    """
-    Update positive_indices based on active_mask.
-    Args:
-        positive_indices (torch.Tensor): The original mask with shape (5000,).
-        active_mask (torch.Tensor): The active mask with shape less than or equal to positive_indices.
-    Returns:
-        torch.Tensor: Updated positive_indices.
-    """
-    # 将 active_mask 映射回 positive_indices 的长度
-    expanded_active_mask = torch.ones_like(positive_indices, dtype=torch.bool)
-    expanded_active_mask[positive_indices] = active_mask
+# def update_positive_indices(positive_indices, active_mask):
+#     """
+#     Update positive_indices based on active_mask.
+#     Args:
+#         positive_indices (torch.Tensor): The original mask with shape (5000,).
+#         active_mask (torch.Tensor): The active mask with shape less than or equal to positive_indices.
+#     Returns:
+#         torch.Tensor: Updated positive_indices.
+#     """
+#     # 将 active_mask 映射回 positive_indices 的长度
+#     expanded_active_mask = torch.ones_like(positive_indices, dtype=torch.bool)
+#     expanded_active_mask[positive_indices] = active_mask
 
-    # 更新 positive_indices：两个 mask 的逻辑与
-    updated_positive_indices = positive_indices & expanded_active_mask
+#     # 更新 positive_indices：两个 mask 的逻辑与
+#     updated_positive_indices = positive_indices & expanded_active_mask
 
-    return updated_positive_indices
+#     return updated_positive_indices
 
-positive_indices = torch.tensor([0, 0, 1, 0, 1]).bool()
-active_mask = torch.tensor([0, 1]).bool()
-print(update_positive_indices(positive_indices, active_mask))
+# positive_indices = torch.tensor([0, 0, 1, 0, 1]).bool()
+# active_mask = torch.tensor([0, 1]).bool()
+# print(update_positive_indices(positive_indices, active_mask))
+

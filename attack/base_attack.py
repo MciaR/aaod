@@ -103,7 +103,7 @@ class BaseAttack():
 
         adv_save_dir = os.path.join(save_dir, 'adv')
         pertub_save_dir = os.path.join(save_dir, 'pertub')
-        img_name = os.path.basename(img).split('.')[0] + '.jpg' # jpg会压缩一部分图像，导致攻击损失。
+        img_name = os.path.basename(img).split('.')[0] + '.png' # jpg会压缩一部分图像，导致攻击损失。
 
         ad_img_path = os.path.join(adv_save_dir, img_name)
         pertub_img_path = os.path.join(pertub_save_dir, img_name) 
