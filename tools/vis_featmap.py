@@ -120,9 +120,9 @@ CFG = {
         'remain_list': ['gamma', 'M']
     },
     'Fusion': {
-        'attack_params': {
+        'attack_params': { # NOTE: best for now 2023.12.20.
             'M': 300,
-            'fmr_weight': 0.5,
+            'fmr_weight': 0.2, # it seems like 0.2 better that 0.5.
             'fmr_params': None,
             'edag_params': None,
         },
