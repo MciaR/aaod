@@ -123,7 +123,7 @@ ATTACK_PARAMS = {
     'Fusion': {
         'attack_params': {
             'M': 300,
-            'fmr_weight': 0.5,
+            'fmr_weight': 0.2,
             'fmr_params': None,
             'edag_params': None,
         },
