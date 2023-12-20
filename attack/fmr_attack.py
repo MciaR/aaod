@@ -267,6 +267,7 @@ class FMRAttack(BaseAttack):
                 gt_fm_vector = gt_fm.view(gt_fm.shape[0], -1)
                 labels = torch.ones(gt_fm.shape[0], 1, device=self.device)
                 cosine_similarity = ((F.cosine_similarity(p_fm_vector, gt_fm_vector) + 1.) / 2.).unsqueeze(-1) # map consie_similarity to [0, 1]
+                cosine_similarity = torch.clamp(cosine_similarity, 0, 1) # make value to [0, 1] surely
                 sim_loss = sim_metric(cosine_similarity, labels)
 
                 # calculate distance
