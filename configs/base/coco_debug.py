@@ -59,7 +59,7 @@ val_dataloader = dict(
         data_root=data_root,
         # ann_file='annotations/png_tiny_val2017.json',
         ann_file='annotations/tiny_val2017.json',
-        # data_prefix=dict(img='EFMR/adv/FR_R101_tiny'), # only for adv infer 
+        # data_prefix=dict(img='FMR/adv/fr_r101_tiny'), # only for adv infer 
         data_prefix=dict(img='images/val2017'),
         test_mode=True,
         pipeline=test_pipeline,
