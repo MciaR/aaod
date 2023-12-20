@@ -173,7 +173,7 @@ class FusionAttack(BaseAttack):
                     #                                         exp_name=_exp_name)
                 step += 1
         except Exception as e:
-            img_name = os.path.basename(img_name)
+            img_name = os.path.basename(x)
             print(f'Attacking error occur, skip image {img_name}. Error info: {e}')
         # 这里用了squeeze实际上是只作为一张图片
         pertub_tensor = pertubed_image.squeeze() - clean_image.squeeze()
