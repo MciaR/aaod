@@ -119,6 +119,15 @@ CFG = {
         },
         'remain_list': ['gamma', 'M']
     },
+    'Fusion': {
+        'attack_params': {
+            'M': 300,
+            'fmr_weight': 0.5,
+            'fmr_params': None,
+            'edag_params': None,
+        },
+        'remain_list': ['M', 'fmr_weight']
+    }
 }
 
 def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end):
@@ -132,8 +141,8 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
         end (int): end index of dataset image.
     """
 
-    assert attacker_name in ['FMR', 'THA', 'EXPDAG', 'DAG', 'EFMR'], \
-        f'`attacker_name` must be `FMR`, `THA`, `DAG`, `EFMR` or `EXPDAG`.'
+    assert attacker_name in ['FMR', 'THA', 'EXPDAG', 'DAG', 'EFMR', 'Fusion'], \
+        f'`attacker_name` must be `FMR`, `THA`, `DAG`, `EFMR`, `Fusion` or `EXPDAG`.'
     
     attack_cfg = CFG[attacker_name]
     attacker_params = attack_cfg['attack_params']
@@ -167,13 +176,17 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
         show_lvl_preds = False
         save_analysis = False
         attacker = EFMRAttack(**attacker_params)
+    elif attacker_name == 'Fusion':
+        save_analysis = False
+        attacker_params.update({'fmr_params': CFG['FMR']['attack_params'], 'edag_params': CFG['EFMR']['attack_params']})
+        attacker = FusionAttack(**attacker_params)
 
     vis = ExpVisualizer(cfg_file=attacker_params['cfg_file'], ckpt_file=attacker_params['ckpt_file'], use_attack=True, attacker=attacker)
     dataset = vis.dataset
 
     for i in range(start, end):
         vis.show_attack_results(model_name=model_name + '_' + dataset_name, data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, 
-                                show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis)
+                                show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.1)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='EFMR', model_name='FR_R101', dataset_name='COCO', exp_name='500_anchors_iou99_png_random', start=0, end=1)
+    execute_attack(attacker_name='Fusion', model_name='FR_R101', dataset_name='COCO', exp_name='test1220', start=0, end=1)

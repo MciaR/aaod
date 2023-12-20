@@ -350,4 +350,3 @@
 # positive_indices = torch.tensor([0, 0, 1, 0, 1]).bool()
 # active_mask = torch.tensor([0, 1]).bool()
 # print(update_positive_indices(positive_indices, active_mask))
-
