@@ -195,7 +195,7 @@ class THAAttack(BaseAttack):
 
             print(self.stages, stage_std_clean, stage_std_adv, sep='\n')
 
-    def generate_adv_samples(self, x, log_info=True):
+    def generate_adv_samples(self, x, data_sample=None, log_info=True):
         """Attack method to generate adversarial image.
         Args:
             x (str): clean image path.

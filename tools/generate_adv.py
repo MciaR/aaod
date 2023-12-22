@@ -127,7 +127,34 @@ ATTACK_PARAMS = {
             'fmr_params': None,
             'edag_params': None,
         },
-    }
+    },
+    'Fusion1': {
+        'attack_params': {
+            'M': 300,
+            'fmr_weight': 1,
+            'fmr_params': None,
+            'edag_params': None,
+        },
+    },
+    'TSA': { # Two stage attack, used FMR attacked result to attack, so the config same to EFMR(EDAG).
+        'attack_params': { # NOTE: Best for fr now: 2023.12.19, 现在攻击的结果有一点点没攻击干净（只有一两个物体，但score下降了）。
+            'gamma': 0.7, # controls noise strength
+            'M': 150, # controls iterations (time consuming)
+            'cfg_options': dict(
+                model = dict(
+                    test_cfg = dict(
+                        rpn=dict( # makes attack dense region.
+                        nms_pre=1000, # nms pre should > max_per_img, otherwise after nms, there will be less than max_per_img. i.e. there are less that max_per_img for rcnn.
+                        max_per_img=500,
+                        nms=dict(type='nms', iou_threshold=0.99),
+                        min_bbox_size=0),
+                        rcnn=None, # makes pred result no nms.
+                    ),
+                )
+            )
+        }
+    },
+
 }
 
 IMAGE_PATH_PREFIX = {
@@ -136,7 +163,7 @@ IMAGE_PATH_PREFIX = {
 }
 
 def generate_and_save(start, end, model, dataset_name, attacker_name, device):
-    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset_name in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'EXPDAG', 'DAG', 'EFMR', 'Fusion']
+    assert model in ['FR_R101', 'FR_VGG16', 'SSD300'] and dataset_name in ['COCO', 'VOC'] and attacker_name in ['FMR', 'THA', 'EXPDAG', 'DAG', 'EFMR', 'Fusion', 'Fusion1', 'TSA']
 
     model_config_path = MODEL_CFG_PREFIX[model] + DATASET_SUFFIX[dataset_name] + '.py'
     checkpoint_file_path = CKPT_FILE_PREFIX[model] + DATASET_SUFFIX[dataset_name] + '.pth'
@@ -154,9 +181,11 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
         attacker = DAGAttack(**attack_params, device=device)
     elif attacker_name == 'EFMR':
         attacker = EFMRAttack(**attack_params, device=device)
-    elif attacker_name == 'Fusion':
+    elif attacker_name == 'Fusion' or attacker_name == 'Fusion1':
         attack_params.update({'fmr_params': ATTACK_PARAMS['FMR']['attack_params'], 'edag_params': ATTACK_PARAMS['EFMR']['attack_params']})
         attacker = FusionAttack(**attack_params, device=device)
+    elif attacker_name == 'TSA':
+        attacker = EFMRAttack(**attack_params, device=device)
 
     adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model + '_tiny')
     pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model + '_tiny')
@@ -196,7 +225,7 @@ if __name__ == "__main__":
     # params
     model = 'FR_R101'
     dataset_name = 'COCO'
-    attacker_name = 'Fusion'
+    attacker_name = 'TSA'
 
     # must know dataset length
     p1 = Process(target=generate_and_save, args=(0, 0.5, model, dataset_name, attacker_name, 'cuda:0'))
