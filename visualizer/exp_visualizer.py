@@ -285,7 +285,7 @@ class ExpVisualizer():
             row += 3
         if show_lvl_preds:
             row += 2
-        plt.figure(frameon=False, figsize=(3*col, 3*row), dpi=300)
+        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         # ====== ori_image & noise & adv_image & pred results =======

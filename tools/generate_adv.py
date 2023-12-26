@@ -56,7 +56,7 @@ ATTACK_PARAMS = {
             'lr': 0.05,
             'M': 300, 
             'adv_type': 'residual',
-            'constrain': 'consine_sim', # distance 似乎也不错，但consine_sim的噪声更小
+            'constrain': 'distance',
         },
     },
     'EXPDAG': {

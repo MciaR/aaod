@@ -57,7 +57,7 @@ CFG = {
             'lr': 0.05,
             'M': 300, 
             'adv_type': 'residual',
-            'constrain': 'consine_sim', # distance 似乎也不错，但consine_sim的噪声更小
+            'constrain': 'distance', # distance 似乎也不错，但consine_sim的噪声更小
         },
         'remain_list': ['feature_type', 'channel_mean', 'stages', 'alpha', 'lr', 'M', 'adv_type', 'constrain', 'modify_percent', 'scale_factor']
     },
@@ -186,7 +186,7 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
 
     for i in range(start, end):
         vis.show_attack_results(model_name=model_name + '_' + dataset_name, data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, 
-                                show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.1)
+                                show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.3)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='THA', model_name='FR_R101', dataset_name='COCO', exp_name='exp1222', start=0, end=1)
+    execute_attack(attacker_name='THA', model_name='FR_R101', dataset_name='COCO', exp_name='exp1226', start=0, end=1)
