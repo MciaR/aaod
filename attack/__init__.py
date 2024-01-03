@@ -5,4 +5,4 @@ from .tha_attack import THAAttack
 from .exp_dag_attack import EXPDAGAttack
 from .dag_attack import DAGAttack
 from .edag_attack import EDAGAttack
-from .fa_attack import FusionAttack
+from .fusion_attack import FusionAttack

@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from attack import BaseAttack, FMRAttack, EFMRAttack
+from attack import BaseAttack, FRMRAttack, EDAGAttack
 
 
 class FusionAttack(BaseAttack):
@@ -21,18 +21,18 @@ class FusionAttack(BaseAttack):
                  exp_name=None,                
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=edag_params['cfg_options'],
-                         attack_params=dict(fmr=frmr_params, edag=edag_params, M=M, frmr_weight=frmr_weight))
-        self.fmr = FMRAttack(cfg_file=cfg_file, ckpt_file=ckpt_file, device=device, **frmr_params)
-        self.edag = EFMRAttack(cfg_file=cfg_file, ckpt_file=ckpt_file, device=device, **edag_params)
-        self.feature_type = self.fmr.feature_type # just for exp_visualizer
+                         attack_params=dict(frmr_params=frmr_params, edag_params=edag_params, M=M, frmr_weight=frmr_weight))
+        self.frmr = FRMRAttack(cfg_file=cfg_file, ckpt_file=ckpt_file, device=device, **frmr_params)
+        self.edag = EDAGAttack(cfg_file=cfg_file, ckpt_file=ckpt_file, device=device, **edag_params)
+        self.feature_type = self.frmr.feature_type # just for exp_visualizer
     
     def get_target_feature(self, img):
-        return self.fmr.get_target_feature(img)
+        return self.frmr.get_target_feature(img)
 
     def generate_adv_samples(self, x, data_sample, log_info=True):
         """Attack method to generate adversarial image.
         Funcs:
-            Fusion of FMR and EDAG Attack.
+            Fusion of frmr and EDAG Attack.
         Args:
             x (str): clean image path.
             log_info (bool): if print the train information.
@@ -52,11 +52,11 @@ class FusionAttack(BaseAttack):
         adv_labels = self.edag.get_adv_targets(target_labels, num_classes=num_classes)
 
         # get feature map of clean img.
-        bb_outs = self._forward(img=x, feature_type=self.fmr.feature_type)
+        bb_outs = self._forward(img=x, feature_type=self.frmr.feature_type)
         # target featmap
-        target_fm = [bb_outs[i] for i in self.fmr.stages]
+        target_fm = [bb_outs[i] for i in self.frmr.stages]
         # featmap that the attack should be generated
-        attack_gt_featmap = [self.fmr.modify_featmap(fm) for fm in target_fm]
+        attack_gt_featmap = [self.frmr.modify_featmap(fm) for fm in target_fm]
 
         # pertubed image, `X_m` in paper
         pertubed_image = clean_image.clone()
@@ -67,23 +67,23 @@ class FusionAttack(BaseAttack):
         edag_loss_metric = torch.nn.CrossEntropyLoss(reduction='sum')
         dis_metric = torch.nn.MSELoss()
         sim_metric = torch.nn.BCELoss()
-        edag_continue = True # if edag has attack 100% bboxes, then just continue fmr attack.
+        edag_continue = True # if edag has attack 100% bboxes, then just continue frmr attack.
 
         if log_info:
             print(f'Start generating adv, total rpn proposal: {total_targets}.')
 
         while step < self.M:      
-            # fmr loss ==============
+            # frmr loss ==============
             # get features
             pertub_bb_output = self.model.backbone(pertubed_image)
-            if self.fmr.feature_type == 'neck':
+            if self.frmr.feature_type == 'neck':
                 pertub_bb_output = self.model.neck(pertub_bb_output)
-            pertub_featmap = [pertub_bb_output[i] for i in self.fmr.stages]
+            pertub_featmap = [pertub_bb_output[i] for i in self.frmr.stages]
             
             l1 = 0
 
             for p_fm, gt_fm in zip(pertub_featmap, attack_gt_featmap):
-                if self.fmr.channel_mean:
+                if self.frmr.channel_mean:
                     p_fm = p_fm.mean(dim=1) # compress (B, C, H, W) to (B, H, W)
 
                 # calculate consine_similarity
@@ -98,17 +98,17 @@ class FusionAttack(BaseAttack):
                 dis_loss = dis_metric(p_fm, gt_fm)
 
                 # decide loss format
-                if self.fmr.constrain == 'consine_sim':
+                if self.frmr.constrain == 'consine_sim':
                     pertub_loss = sim_loss
-                elif self.fmr.constrain == 'distance':
+                elif self.frmr.constrain == 'distance':
                     pertub_loss = dis_loss
-                elif self.fmr.constrain == 'combine':
+                elif self.frmr.constrain == 'combine':
                     pertub_loss = sim_loss + dis_loss
 
-                l1 += (1 / len(self.fmr.stages)) * pertub_loss
+                l1 += (1 / len(self.frmr.stages)) * pertub_loss
 
             l2 = dis_metric(pertubed_image, clean_image)
-            fmr_loss = l1 + self.fmr.alpha * l2
+            frmr_loss = l1 + self.frmr.alpha * l2
 
             # edag loss ==============
             edag_loss = 0
@@ -136,7 +136,7 @@ class FusionAttack(BaseAttack):
                     # if all targets has been attacked successfully, attack ends.
                     edag_continue = False
 
-            total_loss = self.frmr_weight * fmr_loss + edag_loss
+            total_loss = self.frmr_weight * frmr_loss + edag_loss
 
             # backward and comput pertubed image gradient 
             total_loss.backward()
@@ -152,7 +152,7 @@ class FusionAttack(BaseAttack):
             self.model.zero_grad()
 
             if step % 10 == 0 and log_info:
-                print("Generation step [{}/{}], fmr_loss: {}, edag_loss: {}, attack percent: {}%.".format(step, self.M, fmr_loss, edag_loss, (total_targets - len(active_logits)) / total_targets * 100))
+                print("Generation step [{}/{}], frmr_loss: {}, edag_loss: {}, attack percent: {}%.".format(step, self.M, frmr_loss, edag_loss, (total_targets - len(active_logits)) / total_targets * 100))
                 # _exp_name = f'{self.get_attack_name()}/{self.exp_name}'
                 # self.vis.visualize_intermediate_results(r=self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0]),
                 #                                         r_total = self.reverse_augment(x=pertubed_image.squeeze()-clean_image.squeeze(), datasample=data['data_samples'][0]),

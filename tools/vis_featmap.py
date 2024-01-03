@@ -19,6 +19,7 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
     """
     attacker_params = get_attacker_params(model_name, dataset_name, attacker_name)
     remain_list = get_remain_list(attacker_name)
+    attacker_params.update({'exp_name': exp_name})
 
     # expVisualizer params
     show_features = True
@@ -56,4 +57,4 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.3)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='EFMR', model_name='FR_R101', dataset_name='COCO', exp_name='exp1226', start=0, end=1)
+    execute_attack(attacker_name='Fusion', model_name='FR_R101', dataset_name='COCO', exp_name='exp20240103', start=0, end=1)
