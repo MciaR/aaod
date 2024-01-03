@@ -1,7 +1,7 @@
 _base_ = ['./base/coco_debug.py', './base/default_runtime.py', './base/schedule_1x.py']
 
 # custom settings, need import module, so it will excute the registry
-custom_imports = dict(imports=['model.aa_backbone.aa_resnet', 'mmpretrain.models'], allow_failed_imports=False)
+custom_imports = dict(imports=['mmpretrain.models'], allow_failed_imports=False)
 
 # load model pretrained on ImageNet
 pretrained = 'https://download.openmmlab.com/mmclassification/v0/vgg/vgg16_batch256_imagenet_20210208-db26f1a5.pth'
@@ -18,6 +18,8 @@ model = dict(
     backbone=dict(
         type='mmpretrain.VGG',
         depth=16,
+        num_stages=5,
+        frozen_stages=1,
         out_indices=(4, ), # only output the 4th stage.
         with_last_pool=False, # downsample 16x ,otherwise 32x.
         init_cfg=dict(type='Pretrained', checkpoint=pretrained, prefix='backbone.')),
@@ -28,9 +30,9 @@ model = dict(
         feat_channels=512,
         anchor_generator=dict(
             type='AnchorGenerator',
-            scales=[16], # means backbone downsample 16x
+            scales=[8],
             ratios=[0.5, 1.0, 2.0],
-            strides=[16]),
+            strides=[16]), # means backbone downsample 16x
         bbox_coder=dict(
             type='DeltaXYWHBBoxCoder',
             target_means=[.0, .0, .0, .0],

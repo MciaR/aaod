@@ -216,7 +216,8 @@ class BaseAttack():
                 feat = self.model.backbone(input_data)
             else:
                 feat = self.model.backbone(input_data)
-                feat = self.model.neck(feat)
+                if self.model.with_neck:
+                    feat = self.model.neck(feat)
 
         return feat
     
