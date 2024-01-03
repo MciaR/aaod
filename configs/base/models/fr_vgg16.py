@@ -3,6 +3,8 @@ custom_imports = dict(imports=['mmpretrain.models'], allow_failed_imports=False)
 
 # load model pretrained on ImageNet
 pretrained = 'https://download.openmmlab.com/mmclassification/v0/vgg/vgg16_batch256_imagenet_20210208-db26f1a5.pth'
+# for multi-gpu training. find and unused params and set their grad to 0.
+find_unused_parameters = True
 
 # model settings
 model = dict(
