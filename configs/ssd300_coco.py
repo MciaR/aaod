@@ -1,6 +1,6 @@
 _base_ = [
-    'ssd300.py', 'base/coco_debug.py',
-    'base/schedule_2x.py', 'base/default_runtime.py'
+    './base/models/ssd300.py', 'base/datasets/coco_debug.py',
+    'base/schedules/schedule_2x.py', 'base/default_runtime.py'
 ]
 
 # dataset settings
