@@ -7,22 +7,22 @@ from attack import BaseAttack, FMRAttack, EFMRAttack
 class FusionAttack(BaseAttack):
     """Fusion Attack (i.e. Enhanced Feature Representation Mean Regression Attack). 
     Args:
-        fmr_params (dict): params dict of FMR.
+        frmr_params (dict): params dict of FRMR.
         edag_params (dict): params dict of EDAG.
         exp_name (str): experience name. Default `None`.
     """
     def __init__(self, 
                  cfg_file, 
                  ckpt_file,
-                 fmr_params,
+                 frmr_params,
                  edag_params,
                  M,
-                 fmr_weight,
+                 frmr_weight,
                  exp_name=None,                
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=edag_params['cfg_options'],
-                         attack_params=dict(fmr=fmr_params, edag=edag_params, M=M, fmr_weight=fmr_weight))
-        self.fmr = FMRAttack(cfg_file=cfg_file, ckpt_file=ckpt_file, device=device, **fmr_params)
+                         attack_params=dict(fmr=frmr_params, edag=edag_params, M=M, frmr_weight=frmr_weight))
+        self.fmr = FMRAttack(cfg_file=cfg_file, ckpt_file=ckpt_file, device=device, **frmr_params)
         self.edag = EFMRAttack(cfg_file=cfg_file, ckpt_file=ckpt_file, device=device, **edag_params)
         self.feature_type = self.fmr.feature_type # just for exp_visualizer
     
@@ -136,7 +136,7 @@ class FusionAttack(BaseAttack):
                     # if all targets has been attacked successfully, attack ends.
                     edag_continue = False
 
-            total_loss = self.fmr_weight * fmr_loss + edag_loss
+            total_loss = self.frmr_weight * fmr_loss + edag_loss
 
             # backward and comput pertubed image gradient 
             total_loss.backward()

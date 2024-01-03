@@ -4,8 +4,8 @@ from attack import BaseAttack
 from visualizer import AnalysisVisualizer
 
 
-class EFMRAttack(BaseAttack):
-    """Enhanced Feature Map Regression Attack. 
+class EDAGAttack(BaseAttack):
+    """Enhanced DAG Attack. 
         gamma (float): scale factor of normalizing noise `r`.
         M (float): SGD total step.
     """

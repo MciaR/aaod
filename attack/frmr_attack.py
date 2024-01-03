@@ -5,8 +5,8 @@ from attack import BaseAttack
 from torch.optim.lr_scheduler import StepLR
 
 
-class FMRAttack(BaseAttack):
-    """Feature Mean Regression Attack.
+class FRMRAttack(BaseAttack):
+    """Feature Representation Mean Regression Attack.
     Args:         
         eplison (float): niose strength.    
         p (int): default `2`, p-norm to calculate distance between clean and adv image.
@@ -29,7 +29,6 @@ class FMRAttack(BaseAttack):
                  feature_type = 'backbone', # `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
                  channel_mean=False, # means use `C` (channel) to comput loss, the featmap shape is (B, C, H, W).
                  stages: list = [4], # attack stage of backbone. `(0, 1, 2, 3)` for resnet. 看起来0,3时效果最好。ssd和fr_vgg16就取0
-                 p: int = 2, # attack param
                  alpha: float = 5,  # attack param, factor of distance loss. 0.125 for ssd300, 0.25 for fr
                  lr: float = 0.005, # default 0.05
                  M: int = 1000, # attack param, max step of generating perbutaion. 300 for fr, 1000 for ssd.
@@ -37,7 +36,7 @@ class FMRAttack(BaseAttack):
                  constrain='consine_sim', #  - default `consine_sim`, that means use consine similarity to comput loss. `distance`, that means use distance function to comput loss.
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name,
-                         attack_params=dict(global_scale=global_scale, use_channel_scale=use_channel_scale, p=p, alpha=alpha, stages=stages, M=M, lr=lr, feature_type=feature_type, adv_type=adv_type, constrain=constrain, channel_mean=channel_mean))
+                         attack_params=dict(global_scale=global_scale, use_channel_scale=use_channel_scale, alpha=alpha, stages=stages, M=M, lr=lr, feature_type=feature_type, adv_type=adv_type, constrain=constrain, channel_mean=channel_mean))
 
     def get_topk_info(
             self,
