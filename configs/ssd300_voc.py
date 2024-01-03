@@ -2,17 +2,17 @@ _base_ = [
     'ssd300.py', 'base/voc_datasets.py',
     'base/schedule_2x.py', 'base/default_runtime.py'
 ]
-# modify num_classes to voc classes
+
 model = dict(
     bbox_head=dict(
-        num_classes=20
-    )
-)
-batch_size = 4
+        num_classes=20, anchor_generator=dict(basesize_ratio_range=(0.2,
+                                                                    0.9))))
 # dataset settings
+dataset_type = 'VOCDataset'
+data_root = 'data/VOCdevkit/'
 input_size = 300
 train_pipeline = [
-    dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
+    dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(
         type='Expand',
@@ -34,8 +34,9 @@ train_pipeline = [
     dict(type='PackDetInputs')
 ]
 test_pipeline = [
-    dict(type='LoadImageFromFile', backend_args={{_base_.backend_args}}),
+    dict(type='LoadImageFromFile'),
     dict(type='Resize', scale=(input_size, input_size), keep_ratio=False),
+    # avoid bboxes being resized
     dict(type='LoadAnnotations', with_bbox=True),
     dict(
         type='PackDetInputs',
@@ -43,25 +44,57 @@ test_pipeline = [
                    'scale_factor'))
 ]
 train_dataloader = dict(
-    batch_size=batch_size,
-    num_workers=2,
-    batch_sampler=None,
-    dataset=dict(
-        type='RepeatDataset',
-        times=10,     
-    )
-)
-val_dataloader = dict(batch_size=batch_size, dataset=dict(pipeline=test_pipeline))
+    batch_size=8,
+    num_workers=3,
+    dataset=dict(  # RepeatDataset
+        # the dataset is repeated 10 times, and the training schedule is 2x,
+        # so the actual epoch = 12 * 10 = 120.
+        times=10,
+        dataset=dict(  # ConcatDataset
+            # VOCDataset will add different `dataset_type` in dataset.metainfo,
+            # which will get error if using ConcatDataset. Adding
+            # `ignore_keys` can avoid this error.
+            ignore_keys=['dataset_type'],
+            datasets=[
+                dict(
+                    type=dataset_type,
+                    data_root=data_root,
+                    ann_file='VOC2007/ImageSets/Main/trainval.txt',
+                    data_prefix=dict(sub_data_root='VOC2007/'),
+                    filter_cfg=dict(filter_empty_gt=True, min_size=32),
+                    pipeline=train_pipeline),
+                dict(
+                    type=dataset_type,
+                    data_root=data_root,
+                    ann_file='VOC2012/ImageSets/Main/trainval.txt',
+                    data_prefix=dict(sub_data_root='VOC2012/'),
+                    filter_cfg=dict(filter_empty_gt=True, min_size=32),
+                    pipeline=train_pipeline)
+            ])))
+val_dataloader = dict(dataset=dict(pipeline=test_pipeline))
 test_dataloader = val_dataloader
-
-# optimizer
-optim_wrapper = dict(
-    type='OptimWrapper',
-    optimizer=dict(type='SGD', lr=2e-3, momentum=0.9, weight_decay=5e-4))
 
 custom_hooks = [
     dict(type='NumClassCheckHook'),
     dict(type='CheckInvalidLossHook', interval=50, priority='VERY_LOW')
+]
+
+# optimizer
+optim_wrapper = dict(
+    type='OptimWrapper',
+    optimizer=dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=5e-4))
+
+# learning policy
+param_scheduler = [
+    dict(
+        type='LinearLR', start_factor=0.001, by_epoch=False, begin=0, end=500),
+    dict(
+        type='MultiStepLR',
+        begin=0,
+        end=24,
+        by_epoch=True,
+        milestones=[16, 20],
+        gamma=0.1)
 ]
 
 # NOTE: `auto_scale_lr` is for automatically scaling LR,
