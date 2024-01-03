@@ -48,8 +48,8 @@ pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth \
 对对抗样本进行推理
 ```bash
 bash test_adv.sh \
-    $[MODEL] \ # can be [fr_r101, fr_vgg16, ssd300]
-    $[DATASET] # can be [coco, voc]
+    $[MODEL] \ # can be [FR_R101, FR_VGG16, SSD300]
+    $[DATASET] # can be [COCO, VOC]
 ```
 
 # Citation
