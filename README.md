@@ -44,6 +44,14 @@ pretrained/faster_rcnn/faster_rcnn_r101_fpn_1x_coco_20200130-f513f705.pth \
 --out attack_03_03.pkl
 ```
 
+## Test Adv
+对对抗样本进行推理
+```bash
+bash test_adv.sh \
+    $[MODEL] \ # can be [fr_r101, fr_vgg16, ssd300]
+    $[DATASET] # can be [coco, voc]
+```
+
 # Citation
 以上说明来自于MMDetection官方说明文档。<br/>
 本代码库基于OpenMMLab的MMDetection编写，仅用于学术、学习用途。感谢OpenMMLab开发的深度学习框架。
