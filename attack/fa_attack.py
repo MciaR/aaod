@@ -1,16 +1,7 @@
 import torch
 import torch.nn.functional as F
-import numpy as np
-import os
-import mmcv
-import copy
 
-from typing import List
 from attack import BaseAttack, FMRAttack, EFMRAttack
-from visualizer import AnalysisVisualizer
-from PIL import Image
-from mmengine.structures import InstanceData
-from torch.optim.lr_scheduler import StepLR
 
 
 class FusionAttack(BaseAttack):
@@ -176,8 +167,8 @@ class FusionAttack(BaseAttack):
         pertub_tensor = pertubed_image.squeeze() - clean_image.squeeze()
         adv_tensor = pertubed_image.squeeze()
 
-        pertub = self.fmr.reverse_augment(x=pertub_tensor, datasample=data['data_samples'][0])
-        adv_image = self.fmr.reverse_augment(x=adv_tensor, datasample=data['data_samples'][0])
+        pertub = self.reverse_augment(x=pertub_tensor, datasample=data['data_samples'][0])
+        adv_image = self.reverse_augment(x=adv_tensor, datasample=data['data_samples'][0])
 
         if log_info:
             print(f"Generate adv compeleted! Cost iterations {step}.")

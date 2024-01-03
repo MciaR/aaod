@@ -77,4 +77,4 @@ if __name__ == "__main__":
 
     # create_tiny_coco_dataset(dataset_type=dataset_type[0])
     # create_tiny_coco_dataset(dataset_type=dataset_type[1])
-    create_tiny_voc_val_dataset()
+    create_tiny_voc_val_dataset(0.2)

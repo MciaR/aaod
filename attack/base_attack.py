@@ -1,6 +1,7 @@
 import os
 import cv2
 import torch
+import mmcv
 import torch.nn as nn
 import numpy as np
 
@@ -81,6 +82,53 @@ class BaseAttack():
         """Get attack name."""
         return type(self).__name__
     
+    def reverse_augment(self, x, datasample):
+        """Reverse tensor to input image."""
+        ori_shape = datasample.ori_shape
+        pad_shape = datasample.pad_shape
+
+        mean = self.data_preprocessor.mean
+        std = self.data_preprocessor.std 
+
+        # revert normorlize
+        ori_pic = x * std + mean
+        # revert bgr_to_rgb
+        # NOTE: dont need to revert bgr_to_rgb, beacuse saving format is RGB if using PIL.Image
+        # ori_pic = ori_pic[[2, 1, 0], ...]
+        # revert pad
+        ori_pic = ori_pic[:, :datasample.img_shape[0], :datasample.img_shape[1]]
+
+        # (c, h, w) to (h, w, c)
+        ori_pic = ori_pic.permute(1, 2, 0)
+        # cut overflow values
+        ori_pic = torch.clamp(ori_pic, 0, 255)
+
+        ori_pic = ori_pic.detach().cpu().numpy()
+
+        keep_ratio = False
+        for trans in self.test_pipeline:
+            if type(trans).__name__ == 'Resize':
+                keep_ratio = trans.keep_ratio
+
+        # for fr
+        # cuz fr is keep ratio and ssd just resize any pic to (300, 300)
+        if keep_ratio:
+            ori_pic, _ = mmcv.imrescale(
+                                ori_pic,
+                                ori_shape,
+                                interpolation='bilinear',
+                                return_scale=True,
+                                backend='cv2')
+        else:
+            ori_pic, _, _ = mmcv.imresize(
+                                ori_pic,
+                                (ori_shape[1], ori_shape[0]),
+                                interpolation='bilinear',
+                                return_scale=True,
+                                backend='cv2')
+        
+        return ori_pic  
+
     def attack(self, img, data_sample=None):
         """Get inference results of model.
         Args:

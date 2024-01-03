@@ -1,14 +1,8 @@
 import torch
-import torch.nn.functional as F
-import numpy as np
-import mmcv
-import copy
 
 from attack import BaseAttack
 from visualizer import AnalysisVisualizer
-from PIL import Image
 from mmengine.structures import InstanceData
-from torch.optim.lr_scheduler import StepLR
 
 
 class EXPDAGAttack(BaseAttack):
@@ -28,49 +22,7 @@ class EXPDAGAttack(BaseAttack):
             f'`cfg_options` cannot be `None` for DAG Attack.'
         super().__init__(cfg_file, ckpt_file, device=device, cfg_options=cfg_options, exp_name=exp_name,
                          attack_params=dict(gamma=gamma, M=M))
-        self.vis = AnalysisVisualizer(cfg_file=self.cfg_file, ckpt_file=self.ckpt_file)
-        
-    def reverse_augment(self, x, datasample):
-        """Reverse tensor to input image."""
-        ori_shape = datasample.ori_shape
-        pad_shape = datasample.pad_shape
-
-        mean = [123.675, 116.28, 103.53]
-        std = [58.395, 57.12, 57.375] # for fr
-        # std = [1, 1, 1] # for ssd
-        mean_t = torch.tensor(mean, device=self.device).view(-1, 1, 1)
-        std_t = torch.tensor(std, device=self.device).view(-1, 1, 1)
-
-        # revert normorlize
-        ori_pic = x * std_t + mean_t
-        # revert bgr_to_rgb
-        # NOTE: dont need to revert bgr_to_rgb, beacuse saving format is RGB if using PIL.Image
-        # ori_pic = ori_pic[[2, 1, 0], ...]
-        # revert pad
-        ori_pic = ori_pic[:, :datasample.img_shape[0], :datasample.img_shape[1]]
-
-        # (c, h, w) to (h, w, c)
-        ori_pic = ori_pic.permute(1, 2, 0)
-        # cut overflow values
-        ori_pic = torch.clamp(ori_pic, 0, 255)
-
-        ori_pic = ori_pic.detach().cpu().numpy()
-
-        # for fr
-        ori_pic, _ = mmcv.imrescale(
-                            ori_pic,
-                            ori_shape,
-                            interpolation='bilinear',
-                            return_scale=True,
-                            backend='cv2')
-        # ori_pic, _, _ = mmcv.imresize(
-        #                     ori_pic,
-        #                     (ori_shape[1], ori_shape[0]),
-        #                     interpolation='bilinear',
-        #                     return_scale=True,
-        #                     backend='cv2')
-        
-        return ori_pic    
+        self.vis = AnalysisVisualizer(cfg_file=self.cfg_file, ckpt_file=self.ckpt_file)   
 
     def get_targets(
             self,
