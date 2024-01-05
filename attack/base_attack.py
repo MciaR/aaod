@@ -129,10 +129,11 @@ class BaseAttack():
         
         return ori_pic  
 
-    def attack(self, img, data_sample=None):
+    def attack(self, img, save_root=None, data_sample=None):
         """Get inference results of model.
         Args:
             img (str): img path.
+            save_root (str): save root dictrionary, if `None`, results will be saved in `records/attack_pics`. Default `None`.
             data_sample (DetDataSample): contains gt_instances, i.e. gt bboxes and gt labels.
             exp_name (str): exp name.
         Return:
@@ -145,7 +146,10 @@ class BaseAttack():
         pertub, adv = self.generate_adv_samples(x=img, data_sample=data_sample)
 
         attack_name = self.get_attack_name()
-        save_dir = 'records/attack_pics/' + attack_name
+        if save_root is None:
+            save_root = 'records/attack_pics/'
+        save_dir = os.path.join(save_root, attack_name)
+        
         if self.exp_name is not None:
             save_dir = os.path.join(save_dir, self.exp_name)
 

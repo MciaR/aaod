@@ -177,7 +177,7 @@ class EDAGAttack(BaseAttack):
         return updated_positive_indices
 
 
-    def generate_adv_samples(self, x, data_sample, log_info=True):
+    def generate_adv_samples(self, x, data_sample=None, log_info=True):
         """Attack method to generate adversarial image.
         Funcs:
             `Loss_total={{\sum}_{n=1}^N}[f_{l_n}(X + r,t_n) - f_{l'_n}(X + r,t_n)]` (you can find it in the DAG paper),
@@ -194,7 +194,6 @@ class EDAGAttack(BaseAttack):
         # initialize r
         data = self.get_data_from_img(img=x)
         clean_image = data['inputs']
-        data['data_samples'][0].gt_instances = data_sample.gt_instances
         batch_data_samples = data['data_samples']
 
         # get targets from predict

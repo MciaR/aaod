@@ -21,7 +21,7 @@ visualizer = VISUALIZERS.build(model.cfg.visualizer)
 visualizer.dataset_meta = model.dataset_meta
 
 # 测试单张图片并展示结果
-img = 'records/attack_pics/EFMRAttack/FR_R101/500_anchors_gamma05_iou99_png/adv/000000397133.png'  # 或者 img = mmcv.imread(img)，这样图片仅会被读一次
+img = 'data/test_img/roadview.png'  # 或者 img = mmcv.imread(img)，这样图片仅会被读一次
 result = inference_detector(model, img)
 
 # 显示结果
@@ -35,6 +35,6 @@ visualizer.add_datasample(
     data_sample=result,
     draw_gt=False,
     show=True,
-    pred_score_thr=0.3)
+    pred_score_thr=0.7)
 
 visualizer.show()
