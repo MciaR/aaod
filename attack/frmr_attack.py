@@ -204,7 +204,7 @@ class FRMRAttack(BaseAttack):
         while step < self.M:
             # calculate output featmap
             pertub_bb_output = self.model.backbone(r)
-            if self.feature_type == 'neck':
+            if self.feature_type == 'neck' and self.model.with_neck:
                 pertub_bb_output = self.model.neck(pertub_bb_output)
             pertub_featmap = [pertub_bb_output[i] for i in self.stages]
 

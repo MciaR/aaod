@@ -249,12 +249,12 @@
                 "FR_VGG16": {
                     "global_scale": 1,
                     "use_channel_scale": false,
-                    "feature_type": "neck",
+                    "feature_type": "backbone",
                     "channel_mean": false,
                     "stages": [0],
-                    "alpha": 5,
+                    "alpha": 1,
                     "lr": 0.05,
-                    "M": 500,
+                    "M": 300,
                     "adv_type": "residual",
                     "constrain": "distance"
                 },

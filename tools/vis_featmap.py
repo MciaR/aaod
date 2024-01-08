@@ -19,12 +19,15 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
     """
     attacker_params = get_attacker_params(model_name, dataset_name, attacker_name)
     remain_list = get_remain_list(attacker_name)
-    attacker_params.update({'exp_name': exp_name})
+    attacker_params.update({'exp_name': f'{model_name}/{exp_name}'})
 
     # expVisualizer params
     show_features = True
     show_lvl_preds = True
     save_analysis = True
+
+    if model_name == "FR_VGG16":
+        show_lvl_preds = False
 
     if attacker_name == 'FRMR':
         attacker = FRMRAttack(**attacker_params)
@@ -57,4 +60,4 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.3)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='FRMR', model_name='FR_R101', dataset_name='VOC', exp_name='voc_test_20240108', start=1, end=2)
+    execute_attack(attacker_name='FRMR', model_name='FR_VGG16', dataset_name='VOC', exp_name='voc_test_20240108', start=5, end=6)
