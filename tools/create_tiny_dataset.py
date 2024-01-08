@@ -45,6 +45,7 @@ def create_tiny_coco_dataset(dataset_type, percentage: float = 0.1):
 def create_tiny_voc_val_dataset(percentage: int = 0.1):
     anno_file = 'data/VOCdevkit/VOC2007_test/ImageSets/Main/test.txt'
     source_root = 'data/VOCdevkit/VOC2007_test/JPEGImages'
+    anno_root = 'data/VOCdevkit/VOC2007_test/Annotations'
 
     with open(anno_file, 'r') as f:
         anno = f.read().splitlines()
@@ -63,15 +64,23 @@ def create_tiny_voc_val_dataset(percentage: int = 0.1):
         for line in tiny_anno:
             f.write(line + '\n')
 
+    img_anno_save_dir = 'data/VOCdevkit/tiny_voc/Annotations'
+    if not os.path.exists(img_anno_save_dir):
+        os.makedirs(img_anno_save_dir)
+        
     for img_prefix in tqdm(tiny_anno):
         img_name = img_prefix + '.jpg'
-        _source_path = os.path.join(source_root, img_name)
-        _target_path = os.path.join(image_save_dir, img_name)
-        shutil.copyfile(_source_path, _target_path)
+        _img_source_path = os.path.join(source_root, img_name)
+        _img_target_path = os.path.join(image_save_dir, img_name)
+        shutil.copyfile(_img_source_path, _img_target_path)
+
+        img_anno = img_prefix + '.xml'
+        _anno_source_path = os.path.join(anno_root, img_anno)
+        _anno_target_path = os.path.join(img_anno_save_dir, img_anno)
+        shutil.copyfile(_anno_source_path, _anno_target_path)
 
     print(f'Create tiny voc val dataset successfully!')
     
-
 
 if __name__ == "__main__":
 

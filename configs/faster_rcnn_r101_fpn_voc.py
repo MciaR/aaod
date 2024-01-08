@@ -1,4 +1,4 @@
-_base_ = ['./base/models/faster_rcnn_r101_fpn.py', './base/datasets/voc_datasets.py', './base/default_runtime.py', './base/schedules/schedule_1x.py']
+_base_ = ['./base/models/faster_rcnn_r101_fpn.py', './base/datasets/voc_debug.py', './base/default_runtime.py', './base/schedules/schedule_1x.py']
 
 model = dict(roi_head=dict(bbox_head=dict(num_classes=20)))
 
