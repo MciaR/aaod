@@ -11,7 +11,7 @@ from setting import get_attacker_params
 
 IMAGE_PATH_PREFIX = {
     'COCO': 'data/coco2017',
-    'VOC': None,
+    'VOC': 'data/VOCdevkit',
 }
 
 def generate_and_save(start, end, model, dataset_name, attacker_name, device):
@@ -34,6 +34,10 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
 
     adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model + '_tiny')
     pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model + '_tiny')
+
+    if dataset_name == "VOC":
+        adv_save_dir = os.path.join(adv_save_dir, 'JPEGImages')
+        pertub_save_dir = os.path.join(pertub_save_dir, 'JPEGImages')
 
     if not os.path.exists(adv_save_dir):
         os.makedirs(adv_save_dir)
@@ -69,8 +73,8 @@ if __name__ == "__main__":
     
     # params
     model = 'FR_R101'
-    dataset_name = 'COCO'
-    attacker_name = 'TSA'
+    dataset_name = 'VOC'
+    attacker_name = 'FRMR'
 
     # must know dataset length
     p1 = Process(target=generate_and_save, args=(0, 0.5, model, dataset_name, attacker_name, 'cuda:0'))
