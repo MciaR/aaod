@@ -4,7 +4,7 @@ model = dict(roi_head=dict(bbox_head=dict(num_classes=20)))
 
 # training schedule, voc dataset is repeated 3 times, in
 # `_base_/datasets/voc_datasets.py`, so the actual epoch = 4 * 3 = 12
-max_epochs = 4
+max_epochs = 6
 train_cfg = dict(
     type='EpochBasedTrainLoop', max_epochs=max_epochs, val_interval=1)
 val_cfg = dict(type='ValLoop')
@@ -17,7 +17,7 @@ param_scheduler = [
         begin=0,
         end=max_epochs,
         by_epoch=True,
-        milestones=[3],
+        milestones=[4],
         gamma=0.1)
 ]
 
