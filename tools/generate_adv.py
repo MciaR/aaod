@@ -47,11 +47,11 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
         os.makedirs(pertub_save_dir)
 
     if dataset_name == "VOC":
-        annotations_dir = os.path.join(adv_save_dir, 'Annotaations')
+        annotations_dir = os.path.join(adv_save_dir, 'Annotations')
         if not os.path.exists(annotations_dir):
             os.mkdir(annotations_dir)
         # tiny voc for now
-        source_anno_root = 'data/VOCdevkit/tiny_voc/Annotations'
+        source_anno_root = 'data/VOCdevkit/tiny_voc/Annotations_png'
         for file_name in os.listdir(source_anno_root):
             anno_source_path = os.path.join(source_anno_root, file_name)
             anno_target_path = os.path.join(annotations_dir, file_name)
