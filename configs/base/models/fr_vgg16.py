@@ -29,7 +29,7 @@ model = dict(
         feat_channels=512,
         anchor_generator=dict(
             type='AnchorGenerator',
-            scales=[2, 4, 8, 16, 32],
+            scales=[2, 4, 8, 16, 32], # multi scales means different scales for single stage. equalivant with fpn.
             ratios=[0.5, 1.0, 2.0],
             strides=[16]), # means backbone downsample 16x
         bbox_coder=dict(
@@ -80,7 +80,7 @@ model = dict(
             pos_weight=-1,
             debug=False),
         rpn_proposal=dict(
-            nms_pre=12000,
+            nms_pre=12000, # no neck need 12k rpn proposals.
             max_per_img=2000,
             nms=dict(type='nms', iou_threshold=0.7),
             min_bbox_size=0),
@@ -102,7 +102,7 @@ model = dict(
             debug=False)),
     test_cfg=dict(
         rpn=dict(
-            nms_pre=6000,
+            nms_pre=6000, # no neck need 6k rpn proposals.
             max_per_img=1000,
             nms=dict(type='nms', iou_threshold=0.7),
             min_bbox_size=0),
