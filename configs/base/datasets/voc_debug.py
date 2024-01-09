@@ -82,7 +82,7 @@ val_dataloader = dict(
         data_root=data_root,
         ann_file='tiny_voc/ImageSets/Main/test.txt',
         data_prefix=dict(sub_data_root='tiny_voc'), # val during training
-        # data_prefix=dict(sub_data_root='adv/fr_vgg_tiny/'), # only for adv infer
+        # data_prefix=dict(sub_data_root='FRMR/adv/FR_R101_tiny'), # only for adv infer
         test_mode=True,
         pipeline=test_pipeline,
         backend_args=backend_args))

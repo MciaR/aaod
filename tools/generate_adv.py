@@ -1,5 +1,6 @@
 import os
 import torch
+import shutil
 import numpy as np
 
 from attack import *
@@ -44,6 +45,17 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     
     if not os.path.exists(pertub_save_dir):
         os.makedirs(pertub_save_dir)
+
+    if dataset_name == "VOC":
+        annotations_dir = os.path.join(adv_save_dir, 'Annotaations')
+        if not os.path.exists(annotations_dir):
+            os.mkdir(annotations_dir)
+        # tiny voc for now
+        source_anno_root = 'data/VOCdevkit/tiny_voc/Annotations'
+        for file_name in os.listdir(source_anno_root):
+            anno_source_path = os.path.join(source_anno_root, file_name)
+            anno_target_path = os.path.join(annotations_dir, file_name)
+            shutil.copyfile(anno_source_path, anno_target_path)
 
     dataset = attacker.dataset
     start_idx = int(start * len(dataset))

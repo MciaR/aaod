@@ -24,6 +24,7 @@ CKPT_PATH="${CKPT_FILE_PREFIX}${DATASET_SUFFIX}.pth"
 # echo "Model Checkpoint Path: $model_ckpt_path"
 
 # excute test
-python $(dirname "$0")/test.py \
+bash $(dirname "$0")/dist_test.sh \
     $CONFIG_PATH \
     $CKPT_PATH \
+    2
