@@ -82,21 +82,24 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
 
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')
+    num_gpus = torch.cuda.device_count()
+    print(f'Total GPU nums: {num_gpus}, image will be divided to {num_gpus} parts to run.')
+    processes = []
     
     # params
     model = 'FR_R101'
     dataset_name = 'VOC'
     attacker_name = 'FRMR'
 
-    # must know dataset length
-    p1 = Process(target=generate_and_save, args=(0, 0.5, model, dataset_name, attacker_name, 'cuda:0'))
-    p2 = Process(target=generate_and_save, args=(0.5, 1, model, dataset_name, attacker_name, 'cuda:1'))
-    # start
-    p1.start()
-    p2.start()
+    for i in range(num_gpus):
+        start = i / num_gpus
+        end = (i + 1) / num_gpus
+        device = f'cuda:{i}'
+        p = Process(target=generate_and_save, args=(start, end, model, dataset_name, attacker_name, device))
+        p.start()
+        processes.append(p)
 
-    # end
-    p1.join()
-    p2.join()
-
+    # asnyc
+    for p in processes:
+        p.join()
 
