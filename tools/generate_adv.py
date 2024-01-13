@@ -1,6 +1,7 @@
 import os
 import torch
 import shutil
+import time
 import numpy as np
 
 from attack import *
@@ -14,6 +15,13 @@ IMAGE_PATH_PREFIX = {
     'COCO': 'data/coco2017',
     'VOC': 'data/VOCdevkit',
 }
+
+def format_eta(seconds):
+    # 将秒转换为天，时，分
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    return f"{int(days)}D: {int(hours):02}H: {int(minutes):02}M"
 
 def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     attacker_params = get_attacker_params(model_name=model, dataset_name=dataset_name, attacker_name=attacker_name)
@@ -37,6 +45,16 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model)
 
     if dataset_name == "VOC":
+        # copy png annotations to adversarial samples dir
+        annotations_dir = os.path.join(adv_save_dir, 'Annotations')
+        if not os.path.exists(annotations_dir):
+            os.makedirs(annotations_dir)
+        source_anno_root = 'data/VOCdevkit/VOC2007_test/Annotations_png'
+        for file_name in os.listdir(source_anno_root):
+            anno_source_path = os.path.join(source_anno_root, file_name)
+            anno_target_path = os.path.join(annotations_dir, file_name)
+            shutil.copyfile(anno_source_path, anno_target_path)
+
         adv_save_dir = os.path.join(adv_save_dir, 'JPEGImages')
         pertub_save_dir = os.path.join(pertub_save_dir, 'JPEGImages')
 
@@ -46,24 +64,18 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     if not os.path.exists(pertub_save_dir):
         os.makedirs(pertub_save_dir)
 
-    if dataset_name == "VOC":
-        annotations_dir = os.path.join(adv_save_dir, 'Annotations')
-        if not os.path.exists(annotations_dir):
-            os.mkdir(annotations_dir)
-        # tiny voc for now
-        source_anno_root = 'data/VOCdevkit/VOC2007_test/Annotations_png'
-        for file_name in os.listdir(source_anno_root):
-            anno_source_path = os.path.join(source_anno_root, file_name)
-            anno_target_path = os.path.join(annotations_dir, file_name)
-            shutil.copyfile(anno_source_path, anno_target_path)
-
     dataset = attacker.dataset
     start_idx = int(start * len(dataset))
     end_idx = int(end * len(dataset))
 
     iterations = tqdm(range(start_idx, end_idx))
+    start_time = time.time()
     for i in iterations:
-        iterations.set_description(f'{device} generating {i}th image')
+        cur_time = time.time()
+        passed_time = cur_time - start_time
+        average_sample_time = passed_time / (i - start_idx) if i > start_idx else 1
+        eta = format_eta((end_idx - i) * average_sample_time)
+        iterations.set_description(f'{device} generating {i}th image, ETA: {eta}.')
 
         data = dataset[i]
         data_sample = data['data_samples']

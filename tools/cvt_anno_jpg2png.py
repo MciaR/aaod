@@ -50,7 +50,7 @@ if __name__ == '__main__':
     # anno_file_name = 'tiny_val2017.json'
     # cvt_anno_jpg2png_coco(anno_path, anno_file_name)
 
-    anno_path = 'data/VOCdevkit/tiny_voc/Annotations'
-    anno_target_path = 'data/VOCdevkit/tiny_voc/Annotations_png'
+    anno_path = 'data/VOCdevkit/VOC2007_test/Annotations'
+    anno_target_path = 'data/VOCdevkit/VOC2007_test/Annotations_png'
     cvt_anno_jpg2png_voc(anno_path, anno_target_path)
     
