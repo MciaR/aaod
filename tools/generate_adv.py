@@ -46,17 +46,17 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
 
     if dataset_name == "VOC":
         # copy png annotations to adversarial samples dir
-        annotations_dir = os.path.join(adv_save_dir, 'Annotations')
-        if not os.path.exists(annotations_dir):
-            os.makedirs(annotations_dir)
-        source_anno_root = 'data/VOCdevkit/VOC2007_test/Annotations_png'
-        for file_name in os.listdir(source_anno_root):
-            anno_source_path = os.path.join(source_anno_root, file_name)
-            anno_target_path = os.path.join(annotations_dir, file_name)
-            shutil.copyfile(anno_source_path, anno_target_path)
+        # annotations_dir = os.path.join(adv_save_dir, 'Annotations')
+        # if not os.path.exists(annotations_dir):
+        #     os.makedirs(annotations_dir)
+        # source_anno_root = 'data/VOCdevkit/VOC2007_test/Annotations'
+        # for file_name in os.listdir(source_anno_root):
+        #     anno_source_path = os.path.join(source_anno_root, file_name)
+        #     anno_target_path = os.path.join(annotations_dir, file_name)
+        #     shutil.copyfile(anno_source_path, anno_target_path)
 
-        adv_save_dir = os.path.join(adv_save_dir, 'JPEGImages')
-        pertub_save_dir = os.path.join(pertub_save_dir, 'JPEGImages')
+        adv_save_dir = os.path.join(adv_save_dir, 'PNGImages')
+        pertub_save_dir = os.path.join(pertub_save_dir, 'PNGImages')
 
     if not os.path.exists(adv_save_dir):
         os.makedirs(adv_save_dir)
@@ -114,4 +114,18 @@ if __name__ == "__main__":
     # asnyc
     for p in processes:
         p.join()
+
+    if dataset_name == 'VOC':
+        print('Image in VOC Datasets need transfer png to jpg...')
+        adv_png_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model, 'PNGImages')
+        adv_jpg_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model, 'JPEGImages')
+        if not os.path.exists(adv_jpg_save_dir):
+            os.makedirs(adv_jpg_save_dir)
+        for img in os.listdir(adv_png_save_dir):
+            img_name = img.split('.')[0]
+            jpg_img = img_name + '.jpg'
+            source_file = os.path.join(adv_png_save_dir, img)
+            target_file = os.path.join(adv_jpg_save_dir, jpg_img)
+            shutil.copyfile(source_file, target_file)
+    print('Generate Adversarial Samples has done.')
 
