@@ -33,8 +33,8 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     elif attacker_name == 'TSA':
         attacker = EDAGAttack(**attacker_params, device=device)
 
-    adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model + '_tiny')
-    pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model + '_tiny')
+    adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model)
+    pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model)
 
     if dataset_name == "VOC":
         adv_save_dir = os.path.join(adv_save_dir, 'JPEGImages')
@@ -51,7 +51,7 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
         if not os.path.exists(annotations_dir):
             os.mkdir(annotations_dir)
         # tiny voc for now
-        source_anno_root = 'data/VOCdevkit/tiny_voc/Annotations_png'
+        source_anno_root = 'data/VOCdevkit/VOC2007_test/Annotations_png'
         for file_name in os.listdir(source_anno_root):
             anno_source_path = os.path.join(source_anno_root, file_name)
             anno_target_path = os.path.join(annotations_dir, file_name)

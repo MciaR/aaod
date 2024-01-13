@@ -1,5 +1,5 @@
 _base_ = [
-    './base/models/ssd300.py', 'base/datasets/voc_debug.py',
+    './base/models/ssd300.py', 'base/datasets/voc_datasets.py',
     'base/schedules/schedule_2x.py', 'base/default_runtime.py'
 ]
 
