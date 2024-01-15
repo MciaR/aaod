@@ -6,3 +6,4 @@ from .exp_dag_attack import EXPDAGAttack
 from .dag_attack import DAGAttack
 from .edag_attack import EDAGAttack
 from .fusion_attack import FusionAttack
+from .random_noise import RandomNoise

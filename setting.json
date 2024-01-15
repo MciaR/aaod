@@ -233,6 +233,16 @@
                     }
                 }
             },
+            "RN": {
+                "FR_R101": {
+                    "feature_type": "neck",
+                    "channel_mean": false,
+                    "lr": 0.05,
+                    "M": 30,
+                    "adv_type": "residual",
+                    "constrain": "distance"
+                }
+            },
             "FRMR": {
                 "FR_R101": {
                     "global_scale": 1,
@@ -442,7 +452,9 @@
             "EXPDAG": ["gamma", "M"],
             "DAG": ["gamma", "M"],
             "EDAG": ["gamma", "M"],
-            "Fusion": ["M", "frmr_weight"]
+            "Fusion": ["M", "frmr_weight"],
+            "RN": ["M"],
+            "TSA": ["gamma", "M"]
         }
     }
 }

@@ -40,6 +40,8 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
         attacker = FusionAttack(**attacker_params, device=device)
     elif attacker_name == 'TSA':
         attacker = EDAGAttack(**attacker_params, device=device)
+    elif attacker_name == 'RN':
+        attacker = RandomNoise(**attacker_params, device=device)
 
     adv_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'adv', model)
     pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model)
