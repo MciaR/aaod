@@ -3,7 +3,9 @@
         "MODEL_CFG_PREFIX": {
             "FR_R101": "configs/faster_rcnn_r101_fpn",
             "FR_VGG16": "configs/fr_vgg16",
-            "SSD300": "configs/ssd300"
+            "SSD300": "configs/ssd300",
+            "DINO": "configs/dino_r50",
+            "CenterNet": "centernet_r50_fpn"
         },
         
         "DATASET_SUFFIX": {
@@ -14,7 +16,9 @@
         "CKPT_FILE_PREFIX": {
             "FR_R101": "pretrained/fr_r101",
             "FR_VGG16": "pretrained/fr_vgg16",
-            "SSD300": "pretrained/ssd300"
+            "SSD300": "pretrained/ssd300",
+            "DINO": "pretrained/dino",
+            "CenterNet": "pretrained/centernet"
         }
     },
     "ATTACKER_CFG": {
@@ -89,10 +93,74 @@
                     "M": 500,
                     "adv_type": "residual",
                     "constrain": "distance"
+                },
+                "DINO": {
+                    "global_scale": 1,
+                    "use_channel_scale": false,
+                    "feature_type": "neck",
+                    "channel_mean": false,
+                    "stages": [0],
+                    "alpha": 5,
+                    "lr": 0.05,
+                    "M": 500,
+                    "adv_type": "residual",
+                    "constrain": "distance" 
+                },
+                "CenterNet": {
+                    "global_scale": 1,
+                    "use_channel_scale": false,
+                    "feature_type": "neck",
+                    "channel_mean": false,
+                    "stages": [0],
+                    "alpha": 5,
+                    "lr": 0.05,
+                    "M": 500,
+                    "adv_type": "residual",
+                    "constrain": "distance"  
                 }
             },
             "EDAG": {
                 "FR_R101": {
+                    "gamma": 0.7,
+                    "M": 150,
+                    "cfg_options": {
+                        "model": {
+                            "test_cfg": {
+                                "rpn": {
+                                    "nms_pre": 1000,
+                                    "max_per_img": 500,
+                                    "nms": {
+                                        "type": "nms",
+                                        "iou_threshold": 0.99
+                                    },
+                                    "min_bbox_size": 0
+                                },
+                                "rcnn": null
+                            }
+                        }
+                    }
+                },
+                "DINO": {
+                    "gamma": 0.7,
+                    "M": 150,
+                    "cfg_options": {
+                        "model": {
+                            "test_cfg": {
+                                "rpn": {
+                                    "nms_pre": 1000,
+                                    "max_per_img": 500,
+                                    "nms": {
+                                        "type": "nms",
+                                        "iou_threshold": 0.99
+                                    },
+                                    "min_bbox_size": 0
+                                },
+                                "rcnn": null
+                            }
+                        }
+                    }
+                },
+                "CenterNet": {
                     "gamma": 0.7,
                     "M": 150,
                     "cfg_options": {
@@ -153,6 +221,46 @@
             },
             "TSA": {
                 "FR_R101": {
+                    "gamma": 0.7,
+                    "M": 150,
+                    "cfg_options": {
+                        "model": {
+                            "test_cfg": {
+                                "rpn": {
+                                    "nms_pre": 1000,
+                                    "max_per_img": 500,
+                                    "nms": {
+                                        "type": "nms",
+                                        "iou_threshold": 0.99
+                                    },
+                                    "min_bbox_size": 0
+                                },
+                                "rcnn": null
+                            }
+                        }
+                    }
+                },
+                "DINO": {
+                    "gamma": 0.7,
+                    "M": 150,
+                    "cfg_options": {
+                        "model": {
+                            "test_cfg": {
+                                "rpn": {
+                                    "nms_pre": 1000,
+                                    "max_per_img": 500,
+                                    "nms": {
+                                        "type": "nms",
+                                        "iou_threshold": 0.99
+                                    },
+                                    "min_bbox_size": 0
+                                },
+                                "rcnn": null
+                            }
+                        }
+                    }
+                },
+                "CenterNet": {
                     "gamma": 0.7,
                     "M": 150,
                     "cfg_options": {
