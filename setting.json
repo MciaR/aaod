@@ -254,7 +254,7 @@
                     "stages": [0],
                     "alpha": 1,
                     "lr": 0.05,
-                    "M": 300,
+                    "M": 500,
                     "adv_type": "residual",
                     "constrain": "distance"
                 },
