@@ -122,7 +122,7 @@
             "EDAG": {
                 "FR_R101": {
                     "gamma": 0.7,
-                    "M": 120,
+                    "M": 100,
                     "model_name": "fr",
                     "cfg_options": {
                         "model": {
