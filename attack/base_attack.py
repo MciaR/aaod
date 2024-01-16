@@ -31,6 +31,7 @@ class BaseAttack():
         self.data_preprocessor = self.get_data_preprocess()
         self.test_pipeline = self.get_test_pipeline()
         self.attack_params = dict(**attack_params)
+        self.num_classes = len(self.dataset.METAINFO['classes'])
         self.init_attack_params()
 
     def init_attack_params(self):

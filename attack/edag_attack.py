@@ -16,17 +16,32 @@ class EDAGAttack(BaseAttack):
                  exp_name=None,
                  gamma=0.5,
                  M=500,
+                 active_score_thr=0.,
+                 model_name='fr',
                  attack_target: dict = None,
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=cfg_options,
-                         attack_params=dict(gamma=gamma, M=M))
+                         attack_params=dict(gamma=gamma, M=M, model_name=model_name, active_score_thr=active_score_thr))
         self.attack_target = attack_target
         self.vis = AnalysisVisualizer(cfg_file=self.cfg_file, ckpt_file=self.ckpt_file)
+
+    def get_model_predicts(self, x, data_samples):
+        if self.model_name == 'fr':
+            pred_scores, pred_bboxes = self.model(x, data_samples=data_samples, mode='tensor')[0]
+        else:
+            pred_scores, pred_bboxes = self.model(x, data_samples=data_samples, mode='tensor')
+
+        if self.model_name == 'dino':
+            # get last decoder output for this sample
+            pred_scores = pred_scores[-1][0]
+            pred_bboxes = pred_bboxes[-1][0]
+
+        return pred_scores, pred_bboxes
           
     def get_targets(
             self,
             clean_image,
-            data):
+            data_samples):
         """Get active RPN proposals. 
         Args:
             clean_image (torch.Tensor): clean image tensor after preprocess and transform.
@@ -34,12 +49,12 @@ class EDAGAttack(BaseAttack):
         Returns:
             result (DetDataSample): result of pred.
         """
-        data['inputs'] = clean_image
+
         # forward the model
         with torch.no_grad():
-            results = self.model.predict(clean_image, batch_data_samples=data['data_samples'])[0]
-
-        return self.select_positive_targets(results.pred_instances.bboxes, results.pred_instances.scores, data['data_samples'][0])
+            pred_scores, pred_bboxes = self.get_model_predicts(clean_image, data_samples)
+            
+        return self.select_positive_targets(pred_bboxes, pred_scores, data_samples[0])
     
     def nms(self, pred_bboxes, pred_scores, pred_labels, iou_thr=0.5, score_thr=0.3):
         """bboxes non-maxmium supression post processing.
@@ -116,29 +131,50 @@ class EDAGAttack(BaseAttack):
             iou_thr (float): iou filter condition.
             score_thr (float): score filter condition.
         Returns:
-            positive_bboxes (torch.Tensor): remaining high quality targets bboxes.
-            positive_scores (torch.Tensor): remaining high quality targets scores.
+            active_bboxes (torch.Tensor): remaining high quality targets bboxes.
+            active_scores (torch.Tensor): remaining high quality targets scores.
+            active_labels (torch.Tensor): remaining high quality targets labels.
+            valid_indices (torch.Tensor): valid indices.
+            C (int): num_classes of prediction, may equals to `real number of classes` + 1.
             remains (torch.Tensor[bool]): filter flag for proposal_bboxes and its label.
+
         """
+
         N, C = pred_scores.shape
-        pred_scores, paired_label_idx = pred_scores.max(dim=-1)
-        pred_bboxes = pred_bboxes.reshape(N, -1, 4)
+        pred_scores, paired_label_idx = pred_scores.softmax(dim=-1).max(dim=-1)
         # that means has background class.
-        if C != pred_bboxes.shape[1]:
+        if C == self.num_classes + 1:
             valid_indices = (paired_label_idx < C - 1)
         else:
             valid_indices = torch.ones_like(pred_scores, device=self.device).bool()
-        pred_bboxes = pred_bboxes[valid_indices]
-        active_bboxes = pred_bboxes[torch.arange(len(pred_bboxes), device=self.device), paired_label_idx[valid_indices]]
+
+        # if pred_bboxes shape is (N, 4*80)
+        if self.num_classes * 4 == pred_bboxes.shape[1]:
+            pred_bboxes = pred_bboxes.reshape(N, -1, 4)
+            pred_bboxes = pred_bboxes[valid_indices]
+            active_bboxes = pred_bboxes[torch.arange(len(pred_bboxes), device=self.device), paired_label_idx[valid_indices]]
+        else:
+            active_bboxes = pred_bboxes[valid_indices]
         active_scores = pred_scores[valid_indices]
         active_labels = paired_label_idx[valid_indices]
 
         # _exp_name = f'effective_bboxes/{self.get_attack_name()}/{self.exp_name}'
         # self.vis.visualize_bboxes(active_bboxes, data_sample.img_path, exp_name=_exp_name, labels=active_labels, scores=active_scores, distinguished_color=True)
+
+        # need to filter high quality bboxes.
+        filter_indices = active_scores > self.active_score_thr
+        active_scores = active_scores[filter_indices]
+        active_bboxes = active_bboxes[filter_indices]
+        active_labels = active_labels[filter_indices]
+        
+        # get final valid_indices
+        expaned_filter_indices = torch.ones_like(valid_indices, dtype=torch.bool, device=self.device)
+        expaned_filter_indices[valid_indices] = filter_indices
+        valid_indices = valid_indices & expaned_filter_indices
         # final_bboxes, final_scores, final_labels = self.nms(active_bboxes, active_scores, active_labels)
 
         # _exp_name = f'nmsed_bboxes/{self.get_attack_name()}/{self.exp_name}'
-        # self.vis.visualize_bboxes(final_bboxes, data_sample.img_path, exp_name=_exp_name, labels=final_labels, scores=final_scores, distinguished_color=True)
+        # self.vis.visualize_bboxes(active_bboxes, data_sample.img_path, exp_name=_exp_name, labels=active_labels, scores=active_scores, distinguished_color=True)
 
         return active_bboxes, active_scores, active_labels, valid_indices, C
     
@@ -197,7 +233,7 @@ class EDAGAttack(BaseAttack):
         batch_data_samples = data['data_samples']
 
         # get targets from predict
-        target_bboxes, target_scores, target_labels, positive_indices, num_classes = self.get_targets(clean_image, data)
+        target_bboxes, target_scores, target_labels, positive_indices, num_classes = self.get_targets(clean_image, batch_data_samples)
         # get adv labels
         adv_labels = self.get_adv_targets(target_labels, num_classes=num_classes)
 
@@ -215,9 +251,8 @@ class EDAGAttack(BaseAttack):
         while step < self.M:
 
             # get features
-            results = self.model.predict(pertubed_image, batch_data_samples)
-            
-            logits = results[0].pred_instances.scores
+            logits, pred_bboxes = self.get_model_predicts(pertubed_image, batch_data_samples)
+            logits = logits.softmax(dim=-1)
             positive_logtis = logits[positive_indices] # logits corresponding with targets and advs.
 
             # remain the correct targets, drop the incorrect i.e. successful attack targets.
