@@ -90,11 +90,14 @@ class BaseAttack():
         mean = self.data_preprocessor.mean
         std = self.data_preprocessor.std 
 
+        is_rgb = self.model.cfg._cfg_dict.model.data_preprocessor.bgr_to_rgb
+
         # revert normorlize
         ori_pic = x * std + mean
         # revert bgr_to_rgb
-        # NOTE: dont need to revert bgr_to_rgb, beacuse saving format is RGB if using PIL.Image
-        # ori_pic = ori_pic[[2, 1, 0], ...]
+        # dont need to revert bgr_to_rgb if is_rgb is `True`, beacuse saving format is RGB if using PIL.Image
+        if not is_rgb:
+            ori_pic = ori_pic[[2, 1, 0], ...]
         # revert pad
         ori_pic = ori_pic[:, :datasample.img_shape[0], :datasample.img_shape[1]]
 

@@ -373,8 +373,8 @@ class ExpVisualizer():
                     if i == 0:
                         plt.ylabel(f"adv gt {feature_type}")
                     _feature = gt_backbone_feat[i].squeeze(0)
-                    _norm_target = ori_backbone_feat[i].squeeze(0)
-                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
+                    # _norm_target = ori_backbone_feat[i].squeeze(0)
+                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=None)
                     plt.title(f"stage {i}", fontsize=10)
                     plt.imshow(feature_map)
                 ind += 1
@@ -388,8 +388,8 @@ class ExpVisualizer():
                     if i == 0:
                         plt.ylabel(f"adv {feature_type}")
                     _feature = adv_backbone_feat[i].squeeze(0)
-                    _norm_target = ori_backbone_feat[i].squeeze(0)
-                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=_norm_target)
+                    # _norm_target = ori_backbone_feat[i].squeeze(0)
+                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=None)
                     plt.title(f"stage {i}", fontsize=10)
                     plt.imshow(feature_map)
                 ind += 1  
@@ -435,8 +435,8 @@ class ExpVisualizer():
                     pred_score_thr=0)
                 adv_stage_preds.append(adv_neck_pred)
                 _feature = adv_backbone_feat[i].squeeze(0)
-                _norm_target = ori_backbone_feat[i].squeeze(0)
-                adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5, normalize_target=_norm_target)
+                # _norm_target = ori_backbone_feat[i].squeeze(0)
+                adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5, normalize_target=None)
                 plt.title(f"adv Fpn {i} pred", fontsize=10)
                 plt.imshow(adv_heatmap_pred)
                 ind += 1

@@ -19,7 +19,7 @@ def validate_check(model_name, dataset_name, attacker_name):
         f'`model_name`, `dataset_name`, `attacker_name` expected in {models}, {datasets}, {attackers}, but got {model_name}, {dataset_name}, {attacker_name}.'
     
     assert model_name in ATTACKER_CFG[dataset_name][attacker_name].keys(), \
-        f'Attacker `{attacker_name}` has no implement for model `{model_name}`.'
+        f'Attacker `{attacker_name}` has no implement for model `{model_name}` in `{dataset_name}` dataset.'
 
 def get_attacker_params(model_name, dataset_name, attacker_name):
     validate_check(model_name, dataset_name, attacker_name)
