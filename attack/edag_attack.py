@@ -2,6 +2,7 @@ import torch
 
 from attack import BaseAttack
 from visualizer import AnalysisVisualizer
+from mmdet.models.utils import select_single_mlvl
 
 
 class EDAGAttack(BaseAttack):
@@ -22,11 +23,45 @@ class EDAGAttack(BaseAttack):
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=cfg_options,
                          attack_params=dict(gamma=gamma, M=M, model_name=model_name, active_score_thr=active_score_thr))
+        assert model_name in ['fr', 'ssd', 'dino', 'centernet'], \
+            f'EDAG now just support `fr`, `ssd`, `dino` and `centernet` as model_name.'
         self.attack_target = attack_target
         self.vis = AnalysisVisualizer(cfg_file=self.cfg_file, ckpt_file=self.ckpt_file)
 
+
+    def get_final_predicts_from_mlvl(self, scores_list, bbox_list):
+        """Merge multi-level preds.
+        Args:
+            scores_list (List[torch.Tensor]): raw score prediction of single stage detector, each element is a 3-D Tensor, shape is (num_priors * num_classes, W, H).
+            bbox_list (List[torch.Tensor]): raw bboxes prediction of single stage detector,  each element is a 3-D Tensor, shape is (num_priors * 4, W, H).
+        Returns:
+            pred_scores (torch.Tensor): total predict scores, shape is (N, num_classes).
+            pred_bboxes (torch.Tensor): total predict bboxes, shape is (N, 4).
+        """
+        cls_out_channels = self.model.bbox_head.cls_out_channels
+        bbox_dim = self.model.bbox_head.bbox_coder.encode_size
+        mlvl_num_priors = [single_lvl_bbox.shape[0] // 4 for single_lvl_bbox in bbox_list]
+        mlvl_scores = []
+        mlvl_bboxes = []
+        for level_idx, (cls_score, bbox_pred) in enumerate(zip(scores_list, bbox_list)):
+            bbox_pred = bbox_pred.permute(1, 2, 0).reshape(-1, bbox_dim)
+            cls_score = cls_score.permute(1, 2, 0).reshape(-1, cls_out_channels)
+            mlvl_scores.append(cls_score)
+            mlvl_bboxes.append(bbox_pred)
+        
+        return torch.cat(mlvl_scores), torch.cat(mlvl_bboxes)
+
     def get_model_predicts(self, x, data_samples):
+        """Get model raw prediction without postprocessing.
+        Args:
+            x (torch.Tensor): img tensor.
+            data_samples (List[DetDataSample]): batch of data sample.
+        Return:
+            pred_scores (torch.Tensor): total predict scores, shape is (N, num_classes).
+            pred_bboxes (torch.Tensor): total predict bboxes, shape is (N, 4).
+        """
         if self.model_name == 'fr':
+            # `mode='tensor'` means get raw output without postprocess.
             pred_scores, pred_bboxes = self.model(x, data_samples=data_samples, mode='tensor')[0]
         else:
             pred_scores, pred_bboxes = self.model(x, data_samples=data_samples, mode='tensor')
@@ -35,6 +70,12 @@ class EDAGAttack(BaseAttack):
             # get last decoder output for this sample
             pred_scores = pred_scores[-1][0]
             pred_bboxes = pred_bboxes[-1][0]
+        elif self.model_name == 'ssd' or self.model_name == 'centernet':
+            # get output scores and bboxes
+            sample_cls_scores_list = select_single_mlvl(pred_scores, 0, detach=False)
+            sample_bbox_pred_list = select_single_mlvl(pred_bboxes, 0, detach=False)
+            # ssd300 will get 8732 bboxes and centerNet will get 20267 bboxes
+            pred_scores, pred_bboxes = self.get_final_predicts_from_mlvl(sample_cls_scores_list, sample_bbox_pred_list)
 
         return pred_scores, pred_bboxes
           
@@ -45,9 +86,9 @@ class EDAGAttack(BaseAttack):
         """Get active RPN proposals. 
         Args:
             clean_image (torch.Tensor): clean image tensor after preprocess and transform.
-            data (dict): a dict variable which send to `model.test_step()`.
+            data_samples (List[DetDataSample]): batch of data sample.
         Returns:
-            result (DetDataSample): result of pred.
+            Return of `self.select_positive_targets().`
         """
 
         # forward the model
@@ -246,7 +287,7 @@ class EDAGAttack(BaseAttack):
         loss_metric = torch.nn.CrossEntropyLoss(reduction='sum')
 
         if log_info:
-            print(f'Start generating adv, total rpn proposal: {total_targets}.')
+            print(f'Start generating adv, total attack bboxes: {total_targets}.')
 
         while step < self.M:
 

@@ -150,6 +150,7 @@
                 "CenterNet": {
                     "gamma": 0.7,
                     "M": 150,
+                    "active_score_thr": 0.35,
                     "model_name": "centernet",
                     "cfg_options": null
                 }
@@ -366,6 +367,8 @@
                 "FR_R101": {
                     "gamma": 0.7,
                     "M": 150,
+                    "model_name": "fr",
+                    "active_score_thr": 0,
                     "cfg_options": {
                         "model": {
                             "test_cfg": {
@@ -386,6 +389,8 @@
                 "FR_VGG16": {
                     "gamma": 0.7,
                     "M": 150,
+                    "model_name": "fr",
+                    "active_score_thr": 0,
                     "cfg_options": {
                         "model": {
                             "test_cfg": {
@@ -405,23 +410,10 @@
                 },
                 "SSD300": {
                     "gamma": 0.7,
-                    "M": 150,
-                    "cfg_options": {
-                        "model": {
-                            "test_cfg": {
-                                "rpn": {
-                                    "nms_pre": 1000,
-                                    "max_per_img": 500,
-                                    "nms": {
-                                        "type": "nms",
-                                        "iou_threshold": 0.99
-                                    },
-                                    "min_bbox_size": 0
-                                },
-                                "rcnn": null
-                            }
-                        }
-                    }
+                    "M": 200,
+                    "model_name": "ssd",
+                    "active_score_thr": 0,
+                    "cfg_options": null
                 }
             },
             "Fusion": {
