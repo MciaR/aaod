@@ -43,11 +43,10 @@ class FusionAttack(BaseAttack):
         # initialize r
         data = self.get_data_from_img(img=x)
         clean_image = data['inputs']
-        data['data_samples'][0].gt_instances = data_sample.gt_instances
         batch_data_samples = data['data_samples']
 
         # get targets from predict
-        target_bboxes, target_scores, target_labels, positive_indices, num_classes = self.edag.get_targets(clean_image, data)
+        target_bboxes, target_scores, target_labels, positive_indices, num_classes = self.edag.get_targets(clean_image, batch_data_samples)
         # get adv labels
         adv_labels = self.edag.get_adv_targets(target_labels, num_classes=num_classes)
 
@@ -70,13 +69,13 @@ class FusionAttack(BaseAttack):
         edag_continue = True # if edag has attack 100% bboxes, then just continue frmr attack.
 
         if log_info:
-            print(f'Start generating adv, total rpn proposal: {total_targets}.')
+            print(f'Start generating adv, total attack targets: {total_targets}.')
 
         while step < self.M:      
             # frmr loss ==============
             # get features
             pertub_bb_output = self.model.backbone(pertubed_image)
-            if self.frmr.feature_type == 'neck':
+            if self.frmr.feature_type == 'neck' and self.model.with_neck:
                 pertub_bb_output = self.model.neck(pertub_bb_output)
             pertub_featmap = [pertub_bb_output[i] for i in self.frmr.stages]
             
@@ -113,27 +112,40 @@ class FusionAttack(BaseAttack):
             # edag loss ==============
             edag_loss = 0
             if edag_continue:
-                results = self.model.predict(pertubed_image, batch_data_samples)
-                
-                logits = results[0].pred_instances.scores
-                positive_logtis = logits[positive_indices] # logits corresponding with targets and advs.
+                logits, pred_bboxes = self.edag.get_model_predicts(pertubed_image, batch_data_samples)
+                logits = logits.softmax(dim=-1)
+                # NOTE: there may occur an error: `IndexError: The shape of the mask [500] at index 0 does not match the shape of the indexed tensor [0, 21] at index 0.`
+                # that means logits shape is (0, 21), but dont know why output logits has no bbox. maybe is environment problem?
+                if len(logits) > 0:
+                    positive_logtis = logits[positive_indices] # logits corresponding with targets and advs.
 
-                # remain the correct targets, drop the incorrect i.e. successful attack targets.
-                # active_target_idx &= (logits.argmax(dim=1) != adv_labels)
-                active_target_mask = (positive_logtis.argmax(dim=1) != adv_labels)
-                active_logits = positive_logtis[active_target_mask]
-                target_labels = target_labels[active_target_mask]
-                adv_labels = adv_labels[active_target_mask]
-                positive_indices = self.edag.update_positive_indices(positive_indices, active_target_mask)
-                # if still has unsuccessfual target.
-                if len(active_logits) > 0:
-                    # comput loss
-                    correct_loss = edag_loss_metric(active_logits, target_labels)
-                    adv_loss = edag_loss_metric(active_logits, adv_labels)
-                    # decreasing adv_loss to make pertubed image predicted wrong, and increasing correct_loss to let result far from original correct labels.
-                    edag_loss = adv_loss - correct_loss
+                    if self.edag.targeted:
+                        # remain the correct targets, drop the incorrect i.e. successful attack targets.
+                        # active_target_idx &= (logits.argmax(dim=1) != adv_labels)
+                        active_target_mask = (positive_logtis.argmax(dim=1) != adv_labels)
+                        active_logits = positive_logtis[active_target_mask]
+                        target_labels = target_labels[active_target_mask]
+                        adv_labels = adv_labels[active_target_mask]
+                        
+                        adv_loss = edag_loss_metric(active_logits, adv_labels)
+                        positive_indices = self.edag.update_positive_indices(positive_indices, active_target_mask)
+                    else:
+                        active_logits = positive_logtis
+                        adv_loss = 0
+
+                    # if still has unsuccessfual target.
+                    if len(active_logits) > 0:
+                        # comput loss
+                        correct_loss = edag_loss_metric(active_logits, target_labels)
+                        # decreasing adv_loss to make pertubed image predicted wrong, and increasing correct_loss to let result far from original correct labels.
+                        edag_loss = adv_loss - correct_loss
+                    else:
+                        # if all targets has been attacked successfully, attack ends.
+                        edag_continue = False
                 else:
-                    # if all targets has been attacked successfully, attack ends.
+                    edag_continue = False
+                
+                if step > self.edag.M:
                     edag_continue = False
 
             total_loss = self.frmr_weight * frmr_loss + edag_loss
@@ -152,7 +164,10 @@ class FusionAttack(BaseAttack):
             self.model.zero_grad()
 
             if step % 10 == 0 and log_info:
-                print("Generation step [{}/{}], frmr_loss: {}, edag_loss: {}, attack percent: {}%.".format(step, self.M, frmr_loss, edag_loss, (total_targets - len(active_logits)) / total_targets * 100))
+                if self.edag.targeted:
+                    print("Generation step [{}/{}], frmr_loss: {}, edag_loss: {}, attack percent: {}%.".format(step, self.M, frmr_loss, edag_loss, (total_targets - len(active_logits)) / total_targets * 100))
+                else:
+                    print("Generation step [{}/{}], frmr_loss: {}, edag_untargeted_loss: {}.".format(step, self.M, frmr_loss, edag_loss))
                 # _exp_name = f'{self.get_attack_name()}/{self.exp_name}'
                 # self.vis.visualize_intermediate_results(r=self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0]),
                 #                                         r_total = self.reverse_augment(x=pertubed_image.squeeze()-clean_image.squeeze(), datasample=data['data_samples'][0]),

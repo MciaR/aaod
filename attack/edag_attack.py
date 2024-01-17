@@ -18,11 +18,12 @@ class EDAGAttack(BaseAttack):
                  gamma=0.5,
                  M=500,
                  active_score_thr=0.,
+                 targeted=True,
                  model_name='fr',
                  attack_target: dict = None,
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=cfg_options,
-                         attack_params=dict(gamma=gamma, M=M, model_name=model_name, active_score_thr=active_score_thr))
+                         attack_params=dict(gamma=gamma, M=M, model_name=model_name, active_score_thr=active_score_thr, targeted=targeted))
         assert model_name in ['fr', 'ssd', 'dino', 'centernet'], \
             f'EDAG now just support `fr`, `ssd`, `dino` and `centernet` as model_name.'
         self.attack_target = attack_target
@@ -294,22 +295,35 @@ class EDAGAttack(BaseAttack):
             # get features
             logits, pred_bboxes = self.get_model_predicts(pertubed_image, batch_data_samples)
             logits = logits.softmax(dim=-1)
+            # NOTE: there may occur an error: `IndexError: The shape of the mask [500] at index 0 does not match the shape of the indexed tensor [0, 21] at index 0.`
+            # that means logits shape is (0, 21), but dont know why output logits has no bbox. maybe is environment problem?
+            if len(logits) == 0:
+                break
             positive_logtis = logits[positive_indices] # logits corresponding with targets and advs.
 
-            # remain the correct targets, drop the incorrect i.e. successful attack targets.
-            # active_target_idx &= (logits.argmax(dim=1) != adv_labels)
-            active_target_mask = (positive_logtis.argmax(dim=1) != adv_labels)
-            active_logits = positive_logtis[active_target_mask]
-            target_labels = target_labels[active_target_mask]
-            adv_labels = adv_labels[active_target_mask]
-            positive_indices = self.update_positive_indices(positive_indices, active_target_mask)
+            if self.targeted:
+                # remain the correct targets, drop the incorrect i.e. successful attack targets.
+                # active_target_idx &= (logits.argmax(dim=1) != adv_labels)
+                active_target_mask = (positive_logtis.argmax(dim=1) != adv_labels)
+                active_logits = positive_logtis[active_target_mask]
+                target_labels = target_labels[active_target_mask]
+                adv_labels = adv_labels[active_target_mask]
+
+                # comput adv targeted loss
+                adv_loss = loss_metric(active_logits, adv_labels)
+
+                positive_indices = self.update_positive_indices(positive_indices, active_target_mask)
+            else:
+                active_logits = positive_logtis
+                adv_loss = 0
+            
             # if all targets has been attacked successfully, attack ends.
             if len(active_logits) == 0:
                 break
 
             # comput loss
             correct_loss = loss_metric(active_logits, target_labels)
-            adv_loss = loss_metric(active_logits, adv_labels)
+
             # decreasing adv_loss to make pertubed image predicted wrong, and increasing correct_loss to let result far from original correct labels.
             total_loss = adv_loss - correct_loss
 
@@ -327,7 +341,10 @@ class EDAGAttack(BaseAttack):
             self.model.zero_grad()
 
             if step % 10 == 0 and log_info:
-                print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (total_targets - len(active_logits)) / total_targets * 100))
+                if self.targeted:
+                    print("Generation step [{}/{}], loss: {}, attack percent: {}%.".format(step, self.M, total_loss, (total_targets - len(active_logits)) / total_targets * 100))
+                else:
+                    print("Generation step [{}/{}], untargeted loss: {}.".format(step, self.M, total_loss))
                 # _exp_name = f'{self.get_attack_name()}/{self.exp_name}'
                 # self.vis.visualize_intermediate_results(r=self.reverse_augment(x=r.squeeze(), datasample=data['data_samples'][0]),
                 #                                         r_total = self.reverse_augment(x=pertubed_image.squeeze()-clean_image.squeeze(), datasample=data['data_samples'][0]),

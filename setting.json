@@ -155,48 +155,11 @@
                     "cfg_options": null
                 }
             },
-            "Fusion": {
-                "FR_R101": {
-                    "M": 300,
-                    "frmr_weight": 0.2,
-                    "frmr_params": {
-                        "global_scale": 1,
-                        "use_channel_scale": false,
-                        "feature_type": "neck",
-                        "channel_mean": false,
-                        "stages": [0],
-                        "alpha": 5,
-                        "lr": 0.05,
-                        "M": 500,
-                        "adv_type": "residual",
-                        "constrain": "distance"
-                    },
-                    "edag_params": {
-                        "gamma": 0.7,
-                        "M": 150,
-                        "cfg_options": {
-                            "model": {
-                                "test_cfg": {
-                                    "rpn": {
-                                        "nms_pre": 1000,
-                                        "max_per_img": 500,
-                                        "nms": {
-                                            "type": "nms",
-                                            "iou_threshold": 0.99
-                                        },
-                                        "min_bbox_size": 0
-                                    },
-                                    "rcnn": null
-                                }
-                            }
-                        }
-                    }
-                }
-            },
             "TSA": {
                 "FR_R101": {
                     "gamma": 0.7,
-                    "M": 150,
+                    "M": 120,
+                    "model_name": "fr",
                     "cfg_options": {
                         "model": {
                             "test_cfg": {
@@ -208,51 +171,24 @@
                                         "iou_threshold": 0.99
                                     },
                                     "min_bbox_size": 0
-                                },
-                                "rcnn": null
+                                }
                             }
                         }
                     }
                 },
                 "DINO": {
                     "gamma": 0.7,
-                    "M": 150,
-                    "cfg_options": {
-                        "model": {
-                            "test_cfg": {
-                                "rpn": {
-                                    "nms_pre": 1000,
-                                    "max_per_img": 500,
-                                    "nms": {
-                                        "type": "nms",
-                                        "iou_threshold": 0.99
-                                    },
-                                    "min_bbox_size": 0
-                                },
-                                "rcnn": null
-                            }
-                        }
-                    }
+                    "M": 100,
+                    "model_name": "dino",
+                    "active_score_thr": 0.15,
+                    "cfg_options": null
                 },
                 "CenterNet": {
                     "gamma": 0.7,
                     "M": 150,
-                    "cfg_options": {
-                        "model": {
-                            "test_cfg": {
-                                "rpn": {
-                                    "nms_pre": 1000,
-                                    "max_per_img": 500,
-                                    "nms": {
-                                        "type": "nms",
-                                        "iou_threshold": 0.99
-                                    },
-                                    "min_bbox_size": 0
-                                },
-                                "rcnn": null
-                            }
-                        }
-                    }
+                    "active_score_thr": 0.35,
+                    "model_name": "centernet",
+                    "cfg_options": null
                 }
             }
         },
@@ -272,9 +208,9 @@
                 }
             },
             "DAG": {
-                "FR_R101": {
+                "FR_VGG16": {
                     "gamma": 0.5,
-                    "M": 500,
+                    "M": 150,
                     "cfg_options": {
                         "model": {
                             "test_cfg": {
@@ -388,7 +324,7 @@
                 },
                 "FR_VGG16": {
                     "gamma": 0.7,
-                    "M": 150,
+                    "M": 100,
                     "model_name": "fr",
                     "active_score_thr": 0,
                     "cfg_options": {
@@ -410,9 +346,10 @@
                 },
                 "SSD300": {
                     "gamma": 0.7,
-                    "M": 200,
+                    "M": 100,
                     "model_name": "ssd",
                     "active_score_thr": 0,
+                    "targeted": false,
                     "cfg_options": null
                 }
             },
@@ -435,6 +372,8 @@
                     "edag_params": {
                         "gamma": 0.7,
                         "M": 150,
+                        "model_name": "fr",
+                        "active_score_thr": 0,
                         "cfg_options": {
                             "model": {
                                 "test_cfg": {
@@ -452,12 +391,77 @@
                             }
                         }
                     }
+                },
+                "FR_VGG16": {
+                    "M": 300,
+                    "frmr_weight": 0.2,
+                    "frmr_params": {
+                        "global_scale": 1,
+                        "use_channel_scale": false,
+                        "feature_type": "backbone",
+                        "channel_mean": false,
+                        "stages": [0],
+                        "alpha": 1,
+                        "lr": 0.05,
+                        "M": 500,
+                        "adv_type": "residual",
+                        "constrain": "distance"
+                    },
+                    "edag_params": {
+                        "gamma": 0.7,
+                        "M": 100,
+                        "model_name": "fr",
+                        "active_score_thr": 0,
+                        "cfg_options": {
+                            "model": {
+                                "test_cfg": {
+                                    "rpn": {
+                                        "nms_pre": 1000,
+                                        "max_per_img": 500,
+                                        "nms": {
+                                            "type": "nms",
+                                            "iou_threshold": 0.99
+                                        },
+                                        "min_bbox_size": 0
+                                    },
+                                    "rcnn": null
+                                }
+                            }
+                        }
+                    }
+                },
+                "SSD300": {
+                    "M": 300,
+                    "frmr_weight": 0.2,
+                    "frmr_params": {
+                        "global_scale": 1, 
+                        "use_channel_scale": false,
+                        "feature_type": "neck",
+                        "channel_mean": false,
+                        "stages": [0],
+                        "alpha": 0.01,
+                        "lr": 0.05,
+                        "M": 500,
+                        "adv_type": "residual",
+                        "constrain": "distance"
+                    },
+                    "edag_params": {
+                        "gamma": 0.7,
+                        "M": 100,
+                        "model_name": "ssd",
+                        "active_score_thr": 0,
+                        "targeted": false,
+                        "cfg_options": null
+                    }
                 }
+
             },
             "TSA": {
                 "FR_R101": {
                     "gamma": 0.7,
                     "M": 150,
+                    "model_name": "fr",
+                    "active_score_thr": 0,
                     "cfg_options": {
                         "model": {
                             "test_cfg": {
@@ -477,7 +481,9 @@
                 },
                 "FR_VGG16": {
                     "gamma": 0.7,
-                    "M": 150,
+                    "M": 100,
+                    "model_name": "fr",
+                    "active_score_thr": 0,
                     "cfg_options": {
                         "model": {
                             "test_cfg": {
@@ -497,23 +503,11 @@
                 },
                 "SSD300": {
                     "gamma": 0.7,
-                    "M": 150,
-                    "cfg_options": {
-                        "model": {
-                            "test_cfg": {
-                                "rpn": {
-                                    "nms_pre": 1000,
-                                    "max_per_img": 500,
-                                    "nms": {
-                                        "type": "nms",
-                                        "iou_threshold": 0.99
-                                    },
-                                    "min_bbox_size": 0
-                                },
-                                "rcnn": null
-                            }
-                        }
-                    }
+                    "M": 100,
+                    "model_name": "ssd",
+                    "active_score_thr": 0,
+                    "targeted": false,
+                    "cfg_options": null
                 }
             }
         }
@@ -524,7 +518,7 @@
             "THA": ["feature_type", "channel_mean", "stages", "alpha", "lr", "M", "adv_type", "constrain", "modify_percent", "scale_factor"],
             "EXPDAG": ["gamma", "M"],
             "DAG": ["gamma", "M"],
-            "EDAG": ["gamma", "M", "active_score_thr"],
+            "EDAG": ["gamma", "M", "active_score_thr", "targeted"],
             "Fusion": ["M", "frmr_weight"],
             "RN": ["M"],
             "TSA": ["gamma", "M"]
