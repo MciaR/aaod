@@ -290,6 +290,10 @@ class EDAGAttack(BaseAttack):
         if log_info:
             print(f'Start generating adv, total attack bboxes: {total_targets}.')
 
+        with torch.no_grad():
+            clean_logits, _ = self.get_model_predicts(clean_image, batch_data_samples)
+            clean_output_dim = clean_logits.shape[0]
+
         while step < self.M:
 
             # get features
@@ -297,8 +301,10 @@ class EDAGAttack(BaseAttack):
             logits = logits.softmax(dim=-1)
             # NOTE: there may occur an error: `IndexError: The shape of the mask [500] at index 0 does not match the shape of the indexed tensor [0, 21] at index 0.`
             # that means logits shape is (0, 21), but dont know why output logits has no bbox. maybe is environment problem?
-            if len(logits) == 0:
+            if logits.shape[0] != clean_output_dim:
+                print(f'Output dim {logits.shape[0]} less than clean output dim {clean_output_dim}, stop generating.')
                 break
+            
             positive_logtis = logits[positive_indices] # logits corresponding with targets and advs.
 
             if self.targeted:
