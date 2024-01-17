@@ -356,7 +356,7 @@
                     "feature_type": "neck",
                     "channel_mean": false,
                     "stages": [0],
-                    "alpha": 5,
+                    "alpha": 0.01,
                     "lr": 0.05,
                     "M": 500,
                     "adv_type": "residual",

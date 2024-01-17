@@ -30,7 +30,7 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
         show_lvl_preds = False
 
     if attacker_name == 'FRMR':
-        if model_name == 'DINO' or model_name == 'CenterNet':
+        if model_name == 'DINO' or model_name == 'CenterNet' or 'SSD300':
             show_lvl_preds = False
         attacker = FRMRAttack(**attacker_params)
     elif attacker_name == 'THA':
@@ -64,4 +64,4 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.3)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='EDAG', model_name='CenterNet', dataset_name='COCO', exp_name='coco_code_test_0116', start=0, end=1)
+    execute_attack(attacker_name='FRMR', model_name='SSD300', dataset_name='VOC', exp_name='coco_code_test_0116', start=1, end=2)
