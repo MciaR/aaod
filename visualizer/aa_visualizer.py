@@ -269,7 +269,7 @@ class AAVisualizer(DetLocalVisualizer):
         return feat
     
     @staticmethod
-    def map2uni_space(target: np.ndarray, src: np.ndarray):
+    def map2uni_space_normalize(target: np.ndarray, src: np.ndarray):
         """Normlize src featmap to uni-value MINMAX space which same as target.
         Args:
             target (np.ndarray): shape must be (H, W)
@@ -277,19 +277,13 @@ class AAVisualizer(DetLocalVisualizer):
         Returns:
             output (np.ndarray): make the minuim and maxuim of src equal to targets'.
         """
-
-        H, W = src.shape
         target_min = np.min(target)
         target_max = np.max(target)
 
-        src_min_idx = np.argmin(src.flatten())
-        src_min_x, src_min_y = src_min_idx // W, src_min_idx % W
-        src_max_idx = np.argmax(src.flatten())
-        src_max_x, src_max_y = src_max_idx // W, src_max_idx % W
-
-        output = src.copy()
-        output[src_min_x, src_min_y] = target_min
-        output[src_max_x, src_max_y] = target_max
+        src = (src - target_min) / (target_max - target_min)
+        output = np.clip(src, 0, 1)
+        output = output * 255.
+        output = np.asarray(output, dtype=np.uint8)
 
         return output
 
@@ -323,11 +317,12 @@ class AAVisualizer(DetLocalVisualizer):
         if normalize_target is not None:
             if isinstance(normalize_target, torch.Tensor):
                 normalize_target = normalize_target.detach().cpu().numpy()
-            feat_map = self.map2uni_space(normalize_target, feat_map)
+            norm_img = self.map2uni_space_normalize(normalize_target, feat_map)
+        else:
+            norm_img = np.zeros(feat_map.shape)
+            norm_img = cv2.normalize(feat_map, norm_img, 0, 255, cv2.NORM_MINMAX)
+            norm_img = np.asarray(norm_img, dtype=np.uint8)
 
-        norm_img = np.zeros(feat_map.shape)
-        norm_img = cv2.normalize(feat_map, norm_img, 0, 255, cv2.NORM_MINMAX)
-        norm_img = np.asarray(norm_img, dtype=np.uint8)
         if grey:
             heat_img = np.stack((norm_img,) * 3, -1)
         else:
