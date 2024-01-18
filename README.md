@@ -1,6 +1,8 @@
 # AAOD
 Adversarial Attack methods on Object Detection <br/>
 ## Brief
+This is an **unfinished** repo for **Adversarial Attack on Object Detection** research based on mmdet.<br/>
+We implement some classic attack method such as fgsm, dag and so on.<br/>
 [代码数量统计](./code_counter.md)
 
 
