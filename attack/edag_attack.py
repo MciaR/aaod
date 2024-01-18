@@ -1,4 +1,5 @@
 import torch
+import os.path as osp
 
 from attack import BaseAttack
 from visualizer import AnalysisVisualizer
@@ -302,7 +303,8 @@ class EDAGAttack(BaseAttack):
             # NOTE: there may occur an error: `IndexError: The shape of the mask [500] at index 0 does not match the shape of the indexed tensor [0, 21] at index 0.`
             # that means logits shape is (0, 21), but dont know why output logits has no bbox. maybe is environment problem?
             if logits.shape[0] != clean_output_dim:
-                print(f'Output dim {logits.shape[0]} less than clean output dim {clean_output_dim}, stop generating.')
+                img = osp.basename(batch_data_samples[0].img_path)
+                print(f'Output dim {logits.shape[0]} less than clean output dim {clean_output_dim}, step {step}, img {img}, stop generating.')
                 break
             
             positive_logtis = logits[positive_indices] # logits corresponding with targets and advs.

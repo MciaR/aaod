@@ -331,7 +331,7 @@
                         "model": {
                             "test_cfg": {
                                 "rpn": {
-                                    "nms_pre": 1000,
+                                    "nms_pre": 6000,
                                     "max_per_img": 500,
                                     "nms": {
                                         "type": "nms",
@@ -416,7 +416,7 @@
                             "model": {
                                 "test_cfg": {
                                     "rpn": {
-                                        "nms_pre": 1000,
+                                        "nms_pre": 6000,
                                         "max_per_img": 500,
                                         "nms": {
                                             "type": "nms",
@@ -488,7 +488,7 @@
                         "model": {
                             "test_cfg": {
                                 "rpn": {
-                                    "nms_pre": 1000,
+                                    "nms_pre": 6000,
                                     "max_per_img": 500,
                                     "nms": {
                                         "type": "nms",
