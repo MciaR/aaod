@@ -10,6 +10,17 @@ CKPT_FILE_PREFIX = CFG['FILE_CFG']['CKPT_FILE_PREFIX']
 ATTACKER_CFG = CFG['ATTACKER_CFG']
 REMAIN_LIST = CFG['EXP_CFG']['REMAIN_LIST']
 
+def get_model(model_name, dataset_name):
+    models = MODEL_CFG_PREFIX.keys()
+    datasets = DATASET_SUFFIX.keys()
+    assert model_name in models and dataset_name in datasets, \
+        f'model_name expected in {models} and dataset_name expected in {datasets}, but got {model_name} and {dataset_name}.'
+
+    model_config_path = MODEL_CFG_PREFIX[model_name] + DATASET_SUFFIX[dataset_name] + '.py'
+    model_ckpt_path = CKPT_FILE_PREFIX[model_name] + DATASET_SUFFIX[dataset_name] + '.pth'
+
+    return model_config_path, model_ckpt_path
+
 def validate_check(model_name, dataset_name, attacker_name):
     models = MODEL_CFG_PREFIX.keys()
     datasets = DATASET_SUFFIX.keys()
