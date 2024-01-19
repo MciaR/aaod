@@ -15,7 +15,7 @@ class ExpVisualizer():
         use_attack (bool): if it is `True`, then will initialize attacker.
         attack_method (str): `['dcf',]`.
     """
-    def __init__(self, cfg_file, ckpt_file, use_attack=False, attacker=None):
+    def __init__(self, cfg_file, ckpt_file, use_attack=False, attacker=None, fig_fontsize=10):
         self.use_attack = use_attack 
         self.analysiser = AnalysisVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
         self.visualizer = self.analysiser
@@ -26,6 +26,10 @@ class ExpVisualizer():
             assert attacker is not None and isinstance(attacker, BaseAttack), \
                 f'when `user_attack` is True, `attacker` must be set.'
             setattr(self, 'attacker', attacker)  
+
+        self.fontsize = fig_fontsize
+        plt.rcParams['font.sans-serif'] = ['Times New Roman']
+        plt.rcParams['font.size'] = fig_fontsize
     
     @staticmethod
     def get_timestamp():
@@ -79,6 +83,7 @@ class ExpVisualizer():
             grey=False,
             overlaid=False,
             show_thr=0.3,
+            fontsize=10,
     ):
         """Show `ori_img`, `squeeze_mean_channel(backbone)`, `squeeze_mean_channel(neck)`, `final results of each level of extract_feature`.
         Args:
@@ -89,6 +94,7 @@ class ExpVisualizer():
             grey (bool): `True` means return greymap, else return heatmap.
             attack (bool): `True` means using attack method.
             show_thr (float): pred result threshold to show.
+            fontsize (int): text size. Default `10`.
 
         """
         assert img is not None or data_sample is not None, \
@@ -98,10 +104,10 @@ class ExpVisualizer():
         else:
             img_path = data_sample.img_path
 
-        backbone_feat = self.runner._forward(stage='backbone', img=img_path)
+        backbone_feat = self.runner._forward(feature_type='backbone', img=img_path)
 
         if self.model.with_neck:
-            neck_feat = self.runner._forward(stage='neck', img=img_path)
+            neck_feat = self.runner._forward(feature_type='neck', img=img_path)
         else:
             neck_feat = []
 
@@ -111,9 +117,9 @@ class ExpVisualizer():
         _image = np.array(image)
         overlaid_image = _image if overlaid else None
 
-        row, col = (5, output_stages) if self.model.with_neck else (4, output_stages)
+        row, col = (4, output_stages) if self.model.with_neck else (3, output_stages)
 
-        plt.figure(frameon=False, figsize=(12, 8), dpi=300)
+        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         ind = 1
@@ -130,9 +136,22 @@ class ExpVisualizer():
                 plt.subplot(row, col, ind)
                 plt.xticks([],[])
                 plt.yticks([],[])
-                plt.ylabel(f"Origin Pic")
+                plt.ylabel(f"Image")
                 plt.imshow(gt_image)
-                plt.title(f"({_image.shape[0]} x {_image.shape[1]})", fontsize=10)
+                plt.xlabel("GT")
+            if i == 1:
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                plt.xlabel(f"Pred")
+                pred_res = self.visualizer.get_pred(img=img_path)
+                final_pred = self.visualizer.draw_dt_gt(
+                    name='pred',
+                    image=_image,
+                    draw_gt=False,
+                    data_sample=pred_res,
+                    pred_score_thr=show_thr)
+                plt.imshow(final_pred) 
             ind += 1
         
         # ====== Second row: backbone ======
@@ -142,10 +161,10 @@ class ExpVisualizer():
                 plt.xticks([],[])
                 plt.yticks([],[])
                 if i == 0:
-                    plt.ylabel(f"Backbone featmap")
+                    plt.ylabel(f"Backbone")
                 _feature = backbone_feat[i].squeeze(0)
                 feature_map = self.visualizer.draw_featmap(_feature, overlaid_image, channel_reduction='squeeze_mean', grey=grey)
-                plt.title(f"{tuple(_feature.shape)}", fontsize=10)
+                plt.xlabel(f"{tuple(_feature.shape)}")
                 plt.imshow(feature_map)
             ind += 1
 
@@ -156,51 +175,41 @@ class ExpVisualizer():
                 plt.xticks([],[])
                 plt.yticks([],[])
                 if i == 0:
-                    plt.ylabel(f"Fpn featmap")
+                    plt.ylabel(f"Fpn")
                 _feature = neck_feat[i].squeeze(0)
                 feature_map = self.visualizer.draw_featmap(_feature, overlaid_image, channel_reduction='squeeze_mean', grey=grey)
-                plt.title(f"{tuple(_feature.shape)}", fontsize=10)
+                plt.xlabel(f"{tuple(_feature.shape)}")
                 plt.imshow(feature_map)
                 ind += 1
-        
+
         # for fr
         # ====== Fourth row: each level pred results of neck ======            
-        # for i in range(col):
-        #     plt.subplot(row, col, ind)
-        #     plt.xticks([],[])
-        #     plt.yticks([],[])
-        #     if i == 0:
-        #         plt.ylabel(f"Pred result")
-        #     pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
-        #     neck_pred = self.visualizer.draw_dt_gt(
-        #         name='pred',
-        #         image=_image,
-        #         draw_gt=False,
-        #         data_sample=pred_res,
-        #         pred_score_thr=show_thr)
-        #     plt.title(f"Fpn {i} pred", fontsize=10)
-        #     plt.imshow(neck_pred)
-        #     ind += 1
-
-        # ====== Fiveth row: pred ======
-        plt.subplot(row, col, ind)
-        plt.xticks([],[])
-        plt.yticks([],[])
-        plt.ylabel(f"Pred result")
-        pred_res = self.visualizer.get_pred(img=img_path)
-        final_pred = self.visualizer.draw_dt_gt(
-            name='pred',
-            image=_image,
-            draw_gt=False,
-            data_sample=pred_res,
-            pred_score_thr=show_thr)
-        plt.imshow(final_pred) 
-
+        for i in range(col):
+            plt.subplot(row, col, ind)
+            plt.xticks([],[])
+            plt.yticks([],[])
+            if i == 0:
+                plt.ylabel(f"Pred")
+            pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
+            neck_pred = self.visualizer.draw_dt_gt(
+                name='pred',
+                image=_image,
+                draw_gt=False,
+                data_sample=pred_res,
+                pred_score_thr=show_thr)
+            plt.xlabel(f"Fpn {i} pred")
+            plt.imshow(neck_pred)
+            ind += 1
+                
         plt.tight_layout()
         if save:
             img_name = img_path.split('/')[-1].split('.')[0]
-            plt.savefig('records/pics/featmap/{}_{}.png'.format(self.get_timestamp(), img_name))
-        plt.show()
+            save_dir = 'records/analysis/featmap'
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            plt.savefig('{}/{}_{}.png'.format(save_dir, self.get_timestamp(), img_name))
+        else:
+            plt.show()
 
     def save_heatmap_channel(
         self,
