@@ -59,12 +59,26 @@ class ExpVisualizer():
 
         return file_name
 
-    def show_single_pic_feats(self, img, feature_type='backbone', show_stage=0, top_k = 100, pic_overlay=False):
+    def show_single_pic_feats(
+            self,
+            img=None, 
+            data_sample=None, 
+            feature_type='backbone', 
+            show_stage=0, 
+            top_k = 100, 
+            pic_overlay=False):
         """Show `top_k` channels of featuremap of a pic."""
 
-        feat = self.runner._forward(feature_type=feature_type, img=img)
+        assert img is not None or data_sample is not None, \
+            f'`img` and `data_sample` cannot be None both.'
+        if data_sample is None:
+            img_path = img
+        else:
+            img_path = data_sample.img_path
 
-        image = Image.open(img)
+        feat = self.runner._forward(feature_type=feature_type, img=img_path)
+
+        image = Image.open(img_path)
         _image = np.array(image)
         _feature = feat[show_stage].squeeze(0)
 
@@ -73,17 +87,19 @@ class ExpVisualizer():
             _image = None
 
         heatmap = self.visualizer.draw_featmap(_feature, _image, channel_reduction=None, arrangement=(10, 10), topk=top_k, alpha=0.5)
-        self.visualizer.show(img=heatmap)
+        self.visualizer.show(heatmap)
 
     def show_stage_results(
             self,
+            dataset_idx=None,
             img=None,
             data_sample=None,
             save=False,
             grey=False,
             overlaid=False,
             show_thr=0.3,
-            fontsize=10,
+            show_mlvl_pred=False,
+            exp_name=None,
     ):
         """Show `ori_img`, `squeeze_mean_channel(backbone)`, `squeeze_mean_channel(neck)`, `final results of each level of extract_feature`.
         Args:
@@ -94,8 +110,8 @@ class ExpVisualizer():
             grey (bool): `True` means return greymap, else return heatmap.
             attack (bool): `True` means using attack method.
             show_thr (float): pred result threshold to show.
-            fontsize (int): text size. Default `10`.
-
+            show_mlvl_pred (bool): wheter show results repesct to multi-level feature.
+            exp_name (str): experience name for save dir.
         """
         assert img is not None or data_sample is not None, \
             f'`img` and `data_sample` cannot be None both.'
@@ -117,7 +133,9 @@ class ExpVisualizer():
         _image = np.array(image)
         overlaid_image = _image if overlaid else None
 
-        row, col = (4, output_stages) if self.model.with_neck else (3, output_stages)
+        row, col = [3, output_stages] if self.model.with_neck else [2, output_stages]
+        if show_mlvl_pred:
+            row += 1
 
         plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
@@ -183,23 +201,24 @@ class ExpVisualizer():
                 ind += 1
 
         # for fr
-        # ====== Fourth row: each level pred results of neck ======            
-        for i in range(col):
-            plt.subplot(row, col, ind)
-            plt.xticks([],[])
-            plt.yticks([],[])
-            if i == 0:
-                plt.ylabel(f"Pred")
-            pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
-            neck_pred = self.visualizer.draw_dt_gt(
-                name='pred',
-                image=_image,
-                draw_gt=False,
-                data_sample=pred_res,
-                pred_score_thr=show_thr)
-            plt.xlabel(f"Fpn {i} pred")
-            plt.imshow(neck_pred)
-            ind += 1
+        # ====== Fourth row: each level pred results of neck ======    
+        if show_mlvl_pred:        
+            for i in range(col):
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                if i == 0:
+                    plt.ylabel(f"Pred")
+                pred_res = self.visualizer.get_multi_level_pred(index=i, img=img_path)
+                neck_pred = self.visualizer.draw_dt_gt(
+                    name='pred',
+                    image=_image,
+                    draw_gt=False,
+                    data_sample=pred_res,
+                    pred_score_thr=show_thr)
+                plt.xlabel(f"Fpn {i} pred")
+                plt.imshow(neck_pred)
+                ind += 1
                 
         plt.tight_layout()
         if save:
@@ -207,7 +226,12 @@ class ExpVisualizer():
             save_dir = 'records/analysis/featmap'
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            plt.savefig('{}/{}_{}.png'.format(save_dir, self.get_timestamp(), img_name))
+            save_name = f'{img_name}_{self.get_timestamp()}'
+            if dataset_idx:
+                save_name = f'{dataset_idx}-{save_name}'
+            if exp_name:
+                save_name = f'{save_name}_{exp_name}'
+            plt.savefig('{}/{}.png'.format(save_dir, save_name))
         else:
             plt.show()
 
@@ -243,7 +267,7 @@ class ExpVisualizer():
             stage_pred = preds[i]
             normalize_target = normalize_features[i].squeeze(0) if normalize_features is not None else None
             # TODO: 目前normalize_features是没用的
-            topk_heat_channel = self.visualizer.draw_featmap(stage_feat, stage_pred, channel_reduction=None, topk=topk, arrangement=(edge_len, edge_len), grey=grey, alpha=alpha, normalize_target=normalize_target)
+            topk_heat_channel = self.visualizer.draw_featmap(stage_feat, stage_pred, channel_reduction=None, topk=topk, arrangement=(edge_len, edge_len), grey=grey, alpha=alpha, normalize_minmax=None)
             heatmaps = Image.fromarray(topk_heat_channel)
             heatmaps.save(f'{save_dir}/{save_name}-stage{i}.png')
 
@@ -346,11 +370,13 @@ class ExpVisualizer():
             plt.yticks([],[])
             if i == 0:
                 plt.ylabel(model_name)
-            plt.title(f'{image_name[i]}', fontsize=10)
+            plt.xlabel(f'{image_name[i]}')
             plt.imshow(image_list[i])  
             ind += 1
 
         if show_features:
+            import torch
+
             feature_type = self.attacker.feature_type
             # clean backbone featmap
             ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
@@ -358,6 +384,17 @@ class ExpVisualizer():
             gt_backbone_feat = self.attacker.get_target_feature(img=img_path)
             # adv backbone featmap
             adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
+
+            normalize_target_minmax = []
+            for i in range(col):
+                stage_ori_feat = torch.mean(ori_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+                stage_gt_feat = torch.mean(gt_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+                stage_adv_feat = torch.mean(adv_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+
+                global_min = np.min([stage_ori_feat, stage_gt_feat, stage_adv_feat])
+                global_max = np.max([stage_ori_feat, stage_gt_feat, stage_adv_feat])
+
+                normalize_target_minmax.append((global_min, global_max))
 
             # ====== Second row: ori backbone ======
             for i in range(col):
@@ -368,8 +405,8 @@ class ExpVisualizer():
                     if i == 0:
                         plt.ylabel(f"ori {feature_type}")
                     _feature = ori_backbone_feat[i].squeeze(0)
-                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=None)
-                    plt.title(f"stage {i}", fontsize=10)
+                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_minmax=normalize_target_minmax[i])
+                    plt.xlabel(f"stage {i}")
                     plt.imshow(feature_map)
                 ind += 1
 
@@ -382,9 +419,8 @@ class ExpVisualizer():
                     if i == 0:
                         plt.ylabel(f"adv gt {feature_type}")
                     _feature = gt_backbone_feat[i].squeeze(0)
-                    # _norm_target = ori_backbone_feat[i].squeeze(0)
-                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=None)
-                    plt.title(f"stage {i}", fontsize=10)
+                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_minmax=normalize_target_minmax[i])
+                    plt.xlabel(f"stage {i}")
                     plt.imshow(feature_map)
                 ind += 1
 
@@ -397,9 +433,8 @@ class ExpVisualizer():
                     if i == 0:
                         plt.ylabel(f"adv {feature_type}")
                     _feature = adv_backbone_feat[i].squeeze(0)
-                    # _norm_target = ori_backbone_feat[i].squeeze(0)
-                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_target=None)
-                    plt.title(f"stage {i}", fontsize=10)
+                    feature_map = self.visualizer.draw_featmap(_feature, None, channel_reduction='squeeze_mean', grey=feature_grey, normalize_minmax=normalize_target_minmax[i])
+                    plt.xlabel(f"stage {i}")
                     plt.imshow(feature_map)
                 ind += 1  
 
@@ -423,7 +458,7 @@ class ExpVisualizer():
                 clean_stage_preds.append(clean_neck_pred)
                 _feature = ori_backbone_feat[i].squeeze(0)
                 clean_heatmap_pred = self.visualizer.draw_featmap(_feature, clean_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5)
-                plt.title(f"clean Fpn {i} pred", fontsize=10)
+                plt.xlabel(f"clean Fpn {i} pred")
                 plt.imshow(clean_heatmap_pred)
                 ind += 1
 
@@ -444,9 +479,8 @@ class ExpVisualizer():
                     pred_score_thr=0)
                 adv_stage_preds.append(adv_neck_pred)
                 _feature = adv_backbone_feat[i].squeeze(0)
-                # _norm_target = ori_backbone_feat[i].squeeze(0)
-                adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5, normalize_target=None)
-                plt.title(f"adv Fpn {i} pred", fontsize=10)
+                adv_heatmap_pred = self.visualizer.draw_featmap(_feature, adv_neck_pred, channel_reduction='squeeze_mean', grey=feature_grey, alpha=0.5, normalize_minmax=normalize_target_minmax[i])
+                plt.xlabel(f"adv Fpn {i} pred")
                 plt.imshow(adv_heatmap_pred)
                 ind += 1
 

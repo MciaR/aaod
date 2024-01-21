@@ -269,16 +269,16 @@ class AAVisualizer(DetLocalVisualizer):
         return feat
     
     @staticmethod
-    def map2uni_space_normalize(target: np.ndarray, src: np.ndarray):
+    def map2uni_space_normalize(normalize_minmax: Tuple[np.ndarray], src: np.ndarray):
         """Normlize src featmap to uni-value MINMAX space which same as target.
         Args:
-            target (np.ndarray): shape must be (H, W)
+            normalize_minmax (Tuple[np.ndarray]): (min, max).
             src (np.ndarray): shape must be (H, W).
         Returns:
             output (np.ndarray): make the minuim and maxuim of src equal to targets'.
         """
-        target_min = np.min(target)
-        target_max = np.max(target)
+        target_min = normalize_minmax[0]
+        target_max = normalize_minmax[1]
 
         src = (src - target_min) / (target_max - target_min)
         output = np.clip(src, 0, 1)
@@ -292,7 +292,7 @@ class AAVisualizer(DetLocalVisualizer):
                                 img: Optional[np.ndarray] = None,
                                 alpha: float = 0.5,
                                 grey: bool = False,
-                                normalize_target: torch.Tensor = None) -> np.ndarray:
+                                normalize_minmax: Tuple[torch.Tensor] = None) -> np.ndarray:
         """Convert feat_map to heatmap and overlay on image, if image is not None.
 
         Args:
@@ -314,10 +314,8 @@ class AAVisualizer(DetLocalVisualizer):
         if feat_map.ndim == 3:
             feat_map = feat_map.transpose(1, 2, 0)
 
-        if normalize_target is not None:
-            if isinstance(normalize_target, torch.Tensor):
-                normalize_target = normalize_target.detach().cpu().numpy()
-            norm_img = self.map2uni_space_normalize(normalize_target, feat_map)
+        if normalize_minmax is not None:
+            norm_img = self.map2uni_space_normalize(normalize_minmax, feat_map)
         else:
             norm_img = np.zeros(feat_map.shape)
             norm_img = cv2.normalize(feat_map, norm_img, 0, 255, cv2.NORM_MINMAX)
@@ -340,7 +338,7 @@ class AAVisualizer(DetLocalVisualizer):
                      arrangement: Tuple[int, int] = (4, 5),
                      resize_shape: Optional[tuple] = None,
                      grey: bool = False,
-                     normalize_target: torch.Tensor = None,
+                     normalize_minmax: Tuple[np.ndarray] = None,
                      alpha: float = 0.5) -> np.ndarray:
         """Draw featmap.
 
@@ -384,7 +382,7 @@ class AAVisualizer(DetLocalVisualizer):
                 channel_reduction is not None and topk > 0. Defaults to (4, 5).
             resize_shape (tuple, optional): The shape to scale the feature map.
                 Defaults to None.
-            normalize_target (torch.Tensor): map value to target tensor MINMAX.
+            normalize_minmax (Tuple[np.ndarray]): map value to target MINMAX.
             alpha (Union[int, List[int]]): The transparency of featmap.
                 Defaults to 0.5.
 
@@ -437,11 +435,9 @@ class AAVisualizer(DetLocalVisualizer):
                 _, indices = torch.topk(sum_channel_featmap, 1)
                 feat_map = featmap[indices]
             else:
-                if normalize_target is not None:
-                    normalize_target = torch.mean(normalize_target, dim=0)
                 feat_map = torch.mean(featmap, dim=0)
             
-            return self.convert_overlay_heatmap(feat_map, overlaid_image, alpha, grey, normalize_target)
+            return self.convert_overlay_heatmap(feat_map, overlaid_image, alpha, grey, normalize_minmax)
         elif topk <= 0:
             featmap_channel = featmap.shape[0]
             assert featmap_channel in [
