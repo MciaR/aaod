@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import math
+import torch
 import os
 
 from attack import BaseAttack
@@ -61,13 +62,29 @@ class ExpVisualizer():
 
     def show_single_pic_feats(
             self,
-            img=None, 
+            img=None,
+            dataset_idx=None, 
             data_sample=None, 
             feature_type='backbone', 
             show_stage=0, 
-            top_k = 100, 
-            pic_overlay=False):
-        """Show `top_k` channels of featuremap of a pic."""
+            arrangement=(4, 6), 
+            pic_overlay=False,
+            save=True,
+            exp_name=None,
+            feat_normalize=False):
+        """Save `top_k` channels of featuremap of a pic on stage `show_stage`.
+        Args:
+            img (str): path of img.
+            data_sample (DetDataSample): e.g. dataset[0]['data_sample'].
+            save (bool): whether save pic. if it is True, pic will not be shown when running.
+            show_stage (str): string and model map. e.g. `'backbone'` - `model.backbone`, `'neck'` - `model.neck`.
+            arrangement (tuple): row and col of result.
+            pic_overlay (bool): whether make ori image overlay with heatmap.
+            exp_name (str): experience name.
+            feature_type (str): `backbone` or `neck`.
+            dataset_idx (int): index of dataset.
+            feat_normalize (bool): wheter use global MINMAX to universally normalize featmap.
+        """
 
         assert img is not None or data_sample is not None, \
             f'`img` and `data_sample` cannot be None both.'
@@ -86,8 +103,54 @@ class ExpVisualizer():
         if not pic_overlay:
             _image = None
 
-        heatmap = self.visualizer.draw_featmap(_feature, _image, channel_reduction=None, arrangement=(10, 10), topk=top_k, alpha=0.5)
-        self.visualizer.show(heatmap)
+        channel, height, width = _feature.shape
+        topk = arrangement[0] * arrangement[1]
+        row, col = arrangement
+
+        # Extract the feature map of topk
+        topk = min(channel, topk)
+        sum_channel_featmap = torch.sum(_feature, dim=(1, 2))
+        _, indices = torch.topk(sum_channel_featmap, topk)
+        topk_featmap = _feature[indices]
+        
+        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=300)
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+
+        if feat_normalize:
+            normalize_min = torch.min(topk_featmap).detach().cpu().numpy()
+            normalize_max = torch.max(topk_featmap).detach().cpu().numpy()
+            normalize_minmax = (normalize_min, normalize_max)
+        else:
+            normalize_minmax = None
+
+        ind = 1
+        for i in range(row):
+            for j in range(col):
+                feat_ind = i * col + j
+                plt.subplot(row, col, ind)
+                plt.xticks([],[])
+                plt.yticks([],[])
+                single_feature = topk_featmap[feat_ind].unsqueeze(0)
+                feature_map = self.visualizer.draw_featmap(single_feature, _image, channel_reduction='squeeze_mean', normalize_minmax=normalize_minmax)
+                plt.xlabel(f"Channel {indices[feat_ind]}")
+                plt.imshow(feature_map)
+                ind += 1
+
+        plt.tight_layout()
+        if save:
+            img_name = img_path.split('/')[-1].split('.')[0]
+            save_dir = 'records/analysis/topk_featmap'
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            save_name = f'{img_name}_{show_stage}_{self.get_timestamp()}'
+            if dataset_idx:
+                save_name = f'{dataset_idx}-{save_name}'
+            if exp_name:
+                save_name = f'{save_name}_{exp_name}'
+            plt.savefig('{}/{}.png'.format(save_dir, save_name))
+        else:
+            plt.show()
+
 
     def show_stage_results(
             self,
@@ -284,7 +347,8 @@ class ExpVisualizer():
             save_topk_heatmap=False,
             feature_grey=True,
             remain_list=['lr', 'M'],
-            show_thr=0.3):
+            show_thr=0.3,
+            feat_normalize=True):
         """Show `ori_img`, `noise`, `adv_samples`, `attack_results`.
         Args:
             img (str): path of img.
@@ -300,6 +364,7 @@ class ExpVisualizer():
             attack_params (dict): attacker parameters.
             remain_list (list): decide which field will be saved in result file name.
             show_thr (float): pred result threshold to show.
+            feat_normalize (bool): wheter use global MINMAX to universally normalize featmap.
         """
         assert self.use_attack, \
             f'`use_attack` must be `True` when calling function `show_attack_results.`'
@@ -375,8 +440,6 @@ class ExpVisualizer():
             ind += 1
 
         if show_features:
-            import torch
-
             feature_type = self.attacker.feature_type
             # clean backbone featmap
             ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
@@ -385,16 +448,17 @@ class ExpVisualizer():
             # adv backbone featmap
             adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
 
-            normalize_target_minmax = []
-            for i in range(col):
-                stage_ori_feat = torch.mean(ori_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
-                stage_gt_feat = torch.mean(gt_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
-                stage_adv_feat = torch.mean(adv_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+            normalize_target_minmax = [None for _ in range(col)]
+            if feat_normalize:
+                for i in range(col):
+                    stage_ori_feat = torch.mean(ori_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+                    stage_gt_feat = torch.mean(gt_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+                    stage_adv_feat = torch.mean(adv_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
 
-                global_min = np.min([stage_ori_feat, stage_gt_feat, stage_adv_feat])
-                global_max = np.max([stage_ori_feat, stage_gt_feat, stage_adv_feat])
+                    global_min = np.min([stage_ori_feat, stage_gt_feat, stage_adv_feat])
+                    global_max = np.max([stage_ori_feat, stage_gt_feat, stage_adv_feat])
 
-                normalize_target_minmax.append((global_min, global_max))
+                    normalize_target_minmax[i] = (global_min, global_max)
 
             # ====== Second row: ori backbone ======
             for i in range(col):

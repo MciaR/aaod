@@ -16,7 +16,7 @@ if __name__ == "__main__":
     data_idx = 0
 
     # vis.show_stage_results(data_sample=dataset[data_idx]['data_samples'], save=True, show_mlvl_pred=False, exp_name=dataset_name + '_' +  model_name, dataset_idx=data_idx)
-    vis.show_single_pic_feats(data_sample=dataset[data_idx]['data_samples'], feature_type='neck')
+    vis.show_single_pic_feats(data_sample=dataset[data_idx]['data_samples'], save=True, dataset_idx=data_idx, exp_name=dataset_name)
 
 
     
