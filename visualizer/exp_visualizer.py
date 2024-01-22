@@ -16,7 +16,7 @@ class ExpVisualizer():
         use_attack (bool): if it is `True`, then will initialize attacker.
         attack_method (str): `['dcf',]`.
     """
-    def __init__(self, cfg_file, ckpt_file, use_attack=False, attacker=None, fig_fontsize=10):
+    def __init__(self, cfg_file, ckpt_file, use_attack=False, attacker=None, fig_fontsize=18):
         self.use_attack = use_attack 
         self.analysiser = AnalysisVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
         self.visualizer = self.analysiser
@@ -428,7 +428,7 @@ class ExpVisualizer():
         ind = 1
         # ===== First row: result =======
         image_list = [_gt_image, _clean_image, _pertub_img, _ad_image, ad_pred]
-        image_name = ['gt', 'Ori image', 'Pertub noise ', 'Adversarial sample', 'Attack result']
+        image_name = ['GT', 'Ori image', 'Pertub noise ', 'Adversarial sample', 'Attack result']
         for i in range(col):
             plt.subplot(row, col, ind)
             plt.xticks([],[])
@@ -451,14 +451,15 @@ class ExpVisualizer():
             normalize_target_minmax = [None for _ in range(col)]
             if feat_normalize:
                 for i in range(col):
-                    stage_ori_feat = torch.mean(ori_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
-                    stage_gt_feat = torch.mean(gt_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
-                    stage_adv_feat = torch.mean(adv_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+                    if i < len(ori_backbone_feat):
+                        stage_ori_feat = torch.mean(ori_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+                        stage_gt_feat = torch.mean(gt_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
+                        stage_adv_feat = torch.mean(adv_backbone_feat[i].squeeze(0), dim=0).detach().cpu().numpy()
 
-                    global_min = np.min([stage_ori_feat, stage_gt_feat, stage_adv_feat])
-                    global_max = np.max([stage_ori_feat, stage_gt_feat, stage_adv_feat])
+                        global_min = np.min([stage_ori_feat, stage_gt_feat, stage_adv_feat])
+                        global_max = np.max([stage_ori_feat, stage_gt_feat, stage_adv_feat])
 
-                    normalize_target_minmax[i] = (global_min, global_max)
+                        normalize_target_minmax[i] = (global_min, global_max)
 
             # ====== Second row: ori backbone ======
             for i in range(col):
