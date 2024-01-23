@@ -441,11 +441,11 @@ class ExpVisualizer():
         if show_features:
             feature_type = self.attacker.feature_type
             # clean backbone featmap
-            ori_backbone_feat = self.runner._forward(feature_type=feature_type, img=img_path)
+            ori_backbone_feat = self.attacker._forward(feature_type=feature_type, img=img_path)
             # target featmap
             gt_backbone_feat = self.attacker.get_target_feature(img=img_path)
             # adv backbone featmap
-            adv_backbone_feat = self.runner._forward(feature_type=feature_type, img=ad_image_path)
+            adv_backbone_feat = self.attacker._forward(feature_type=feature_type, img=ad_image_path)
 
             normalize_target_minmax = [None for _ in range(col)]
             if feat_normalize:

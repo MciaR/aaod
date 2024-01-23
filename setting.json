@@ -284,7 +284,16 @@
                     "lr": 0.05,
                     "M": 500,
                     "adv_type": "residual",
-                    "constrain": "distance"
+                    "constrain": "distance",
+                    "early_stage": false,
+                    "cfg_options": {
+                        "model": {
+                            "backbone":
+                            {
+                                "out_indices": [0, 1, 2, 3, 4]
+                            }
+                        }
+                    }
                 },
                 "SSD300": {
                     "global_scale": 1, 
@@ -514,7 +523,7 @@
     },
     "EXP_CFG": {
         "REMAIN_LIST": {
-            "FRMR": ["feature_type", "channel_mean", "stages", "alpha", "lr", "M", "adv_type", "constrain", "global_scale", "use_channel_scale"],
+            "FRMR": ["feature_type", "channel_mean", "stages", "alpha", "lr", "M", "adv_type", "constrain", "global_scale", "use_channel_scale", "early_stage"],
             "THA": ["feature_type", "channel_mean", "stages", "alpha", "lr", "M", "adv_type", "constrain", "modify_percent", "scale_factor"],
             "EXPDAG": ["gamma", "M"],
             "DAG": ["gamma", "M"],

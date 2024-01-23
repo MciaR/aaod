@@ -32,11 +32,19 @@ class FRMRAttack(BaseAttack):
                  alpha: float = 5,  # attack param, factor of distance loss. 0.125 for ssd300, 0.25 for fr
                  lr: float = 0.005, # default 0.05
                  M: int = 1000, # attack param, max step of generating perbutaion. 300 for fr, 1000 for ssd.
+                 early_stage: bool = False,
+                 cfg_options=None,
                  adv_type='direct', # `direct` or `residual`, `direct` means cal pertub noise as whole image directly, `residual` means only cal pertub noise.
                  constrain='consine_sim', #  - default `consine_sim`, that means use consine similarity to comput loss. `distance`, that means use distance function to comput loss.
                  device='cuda:0') -> None:
-        super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name,
-                         attack_params=dict(global_scale=global_scale, use_channel_scale=use_channel_scale, alpha=alpha, stages=stages, M=M, lr=lr, feature_type=feature_type, adv_type=adv_type, constrain=constrain, channel_mean=channel_mean))
+        # if not attack backbone early stage
+        if not early_stage:
+            cfg_options=None
+        else:
+            assert cfg_options is not None, \
+                f'if `early_stage` is True, cfg_options must be set.'
+        super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=cfg_options,
+                         attack_params=dict(early_stage=early_stage, global_scale=global_scale, use_channel_scale=use_channel_scale, alpha=alpha, stages=stages, M=M, lr=lr, feature_type=feature_type, adv_type=adv_type, constrain=constrain, channel_mean=channel_mean))
 
     def get_topk_info(
             self,
