@@ -82,8 +82,8 @@ class AnalysisVisualizer(AAVisualizer):
         outputs = self._forward(feature_type=feature_type, img=img_path) # (stages, 1, C, H, W)
 
         row, col = (1, len(outputs))
-        plt.figure(frameon=False, figsize=(3*col, 3*row), dpi=300)
-        # plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+        plt.figure(frameon=False, figsize=(4*col, 4*row), dpi=300)
+        plt.subplots_adjust(wspace=0.3)
 
         for i in range(len(outputs)):
             feature_map = outputs[i]
