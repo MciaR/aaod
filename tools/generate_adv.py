@@ -47,15 +47,15 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
     pertub_save_dir = os.path.join(IMAGE_PATH_PREFIX[dataset_name], attacker_name, 'pertub', model)
 
     if dataset_name == "VOC":
-        # copy png annotations to adversarial samples dir
-        # annotations_dir = os.path.join(adv_save_dir, 'Annotations')
-        # if not os.path.exists(annotations_dir):
-        #     os.makedirs(annotations_dir)
-        # source_anno_root = 'data/VOCdevkit/VOC2007_test/Annotations'
-        # for file_name in os.listdir(source_anno_root):
-        #     anno_source_path = os.path.join(source_anno_root, file_name)
-        #     anno_target_path = os.path.join(annotations_dir, file_name)
-        #     shutil.copyfile(anno_source_path, anno_target_path)
+        # copy annotations to adversarial samples dir
+        annotations_dir = os.path.join(adv_save_dir, 'Annotations')
+        if not os.path.exists(annotations_dir):
+            os.makedirs(annotations_dir)
+        source_anno_root = 'data/VOCdevkit/VOC2007_test/Annotations'
+        for file_name in os.listdir(source_anno_root):
+            anno_source_path = os.path.join(source_anno_root, file_name)
+            anno_target_path = os.path.join(annotations_dir, file_name)
+            shutil.copyfile(anno_source_path, anno_target_path)
 
         adv_save_dir = os.path.join(adv_save_dir, 'PNGImages')
         pertub_save_dir = os.path.join(pertub_save_dir, 'PNGImages')
@@ -101,9 +101,9 @@ if __name__ == "__main__":
     processes = []
     
     # params
-    model = 'FR_R101'
+    model = 'FR_VGG16'
     dataset_name = 'VOC'
-    attacker_name = 'FRMR'
+    attacker_name = 'DAG'
 
     for i in range(num_gpus):
         start = i / num_gpus
