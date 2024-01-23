@@ -42,6 +42,8 @@ class AnalysisVisualizer(AAVisualizer):
             '#604E97', '#F6A600', '#B3446C', '#DCD300', '#882D17', '#8DB600', '#654522'
         ]
 
+        plt.rcParams['font.sans-serif'] = ['Times New Roman']
+        plt.rcParams['font.size'] = self.fig_fontsize
 
     @staticmethod
     def get_timestamp():
@@ -98,7 +100,7 @@ class AnalysisVisualizer(AAVisualizer):
                 plt.ylabel(figure_name)
             plt.subplot(row, col, i + 1) # subplot index start from 1
             plt.ylim(-2, 2)
-            plt.title(f'{feature_type} stages {i}', fontsize=10)
+            plt.title(f'{feature_type} stages {i}')
             plt.scatter(x, y, s=10)
 
         save_path = os.path.join(self.save_dir, 'activate_mean_by_channel')
@@ -229,7 +231,7 @@ class AnalysisVisualizer(AAVisualizer):
         plt.axis('off')
         plt.savefig(f'{save_path}/{save_img_name}-{self.get_timestamp()}.jpg')
 
-        # TODO: 可以加一个柱形图，按gtbbox的area排序绘制，每个gt具有不同颜色，柱形高度为gt拥有的proposal数量。
+        # 柱形图，按gtbbox的area排序绘制，每个gt具有不同颜色，柱形高度为gt拥有的proposal数量。
         plt.clf()
         gt_bboxes_areas = (gt_bboxes[:, 2] - gt_bboxes[:, 0]) * (gt_bboxes[:, 3] - gt_bboxes[:, 1])
         gt_bboxes_areas = gt_bboxes_areas.astype(int)
@@ -293,7 +295,7 @@ class AnalysisVisualizer(AAVisualizer):
             plt.yticks([],[])
             if i == 0:
                 plt.ylabel(f"Step {customize_str} results")
-            plt.title(f"{title_list[i]}", fontsize=10)
+            plt.xlabel(f"{title_list[i]}")
             plt.imshow(vis_list[i])
         
         save_path = os.path.join(self.save_dir, 'intermediate_results', exp_name)

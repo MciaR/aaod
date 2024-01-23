@@ -16,7 +16,7 @@ class ExpVisualizer():
         use_attack (bool): if it is `True`, then will initialize attacker.
         attack_method (str): `['dcf',]`.
     """
-    def __init__(self, cfg_file, ckpt_file, use_attack=False, attacker=None, fig_fontsize=18):
+    def __init__(self, cfg_file, ckpt_file, use_attack=False, attacker=None):
         self.use_attack = use_attack 
         self.analysiser = AnalysisVisualizer(cfg_file=cfg_file, ckpt_file=ckpt_file)
         self.visualizer = self.analysiser
@@ -28,9 +28,8 @@ class ExpVisualizer():
                 f'when `user_attack` is True, `attacker` must be set.'
             setattr(self, 'attacker', attacker)  
 
-        self.fontsize = fig_fontsize
         plt.rcParams['font.sans-serif'] = ['Times New Roman']
-        plt.rcParams['font.size'] = fig_fontsize
+        plt.rcParams['font.size'] = self.visualizer.fig_fontsize
     
     @staticmethod
     def get_timestamp():

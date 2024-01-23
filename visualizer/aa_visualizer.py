@@ -25,12 +25,15 @@ class AAVisualizer(DetLocalVisualizer):
                  cfg_file, 
                  ckpt_file, 
                  name: str = 'visualizer', 
-                 device='cuda:0'):
+                 device='cuda:0',
+                 fig_fontsize=18,
+                 ):
         super().__init__(name=name)
         self.device = device
         self.model = self.get_model(cfg_file=cfg_file, ckpt_path=ckpt_file)
         self.dataset_meta = self.model.dataset_meta
         self.data_preprocessor = self.get_data_preprocess()
+        self.fig_fontsize = fig_fontsize
     
     def get_model(self, cfg_file, ckpt_path):
         model = init_detector(cfg_file, ckpt_path, device=self.device)
