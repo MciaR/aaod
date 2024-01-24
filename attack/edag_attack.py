@@ -184,6 +184,7 @@ class EDAGAttack(BaseAttack):
         """
 
         N, C = pred_scores.shape
+        # ori_pred_scores, ori_pred_bboxes = pred_scores.clone(), pred_bboxes.clone()
         pred_scores, paired_label_idx = pred_scores.softmax(dim=-1).max(dim=-1)
         # that means has background class.
         if C == self.num_classes + 1:
@@ -200,9 +201,10 @@ class EDAGAttack(BaseAttack):
             active_bboxes = pred_bboxes[valid_indices]
         active_scores = pred_scores[valid_indices]
         active_labels = paired_label_idx[valid_indices]
-
-        # _exp_name = f'effective_bboxes/{self.get_attack_name()}/{self.exp_name}'
-        # self.vis.visualize_bboxes(active_bboxes, data_sample.img_path, exp_name=_exp_name, labels=active_labels, scores=active_scores, distinguished_color=True)
+        
+        # _exp_name = f'pred_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # predictions = self.model.bbox_head._predict_by_feat_single(cls_score=ori_pred_scores[valid_indices], bbox_pred=ori_pred_bboxes[valid_indices], img_meta=data_sample.metainfo, rescale=True)
+        # self.vis.visualize_bboxes(predictions.bboxes, data_sample.img_path, exp_name=_exp_name, labels=predictions.labels, scores=predictions.scores, distinguished_color=True)
 
         # need to filter high quality bboxes.
         filter_indices = active_scores > self.active_score_thr
@@ -216,8 +218,9 @@ class EDAGAttack(BaseAttack):
         valid_indices = valid_indices & expaned_filter_indices
         # final_bboxes, final_scores, final_labels = self.nms(active_bboxes, active_scores, active_labels)
 
-        # _exp_name = f'nmsed_bboxes/{self.get_attack_name()}/{self.exp_name}'
-        # self.vis.visualize_bboxes(active_bboxes, data_sample.img_path, exp_name=_exp_name, labels=active_labels, scores=active_scores, distinguished_color=True)
+        # _exp_name = f'effective_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # predictions = self.model.bbox_head._predict_by_feat_single(ori_pred_scores[valid_indices], ori_pred_bboxes[valid_indices], img_meta=data_sample.metainfo, rescale=True)
+        # self.vis.visualize_bboxes(predictions.bboxes, data_sample.img_path, exp_name=_exp_name, labels=predictions.labels, scores=predictions.scores, distinguished_color=True)
 
         return active_bboxes, active_scores, active_labels, valid_indices, C
     

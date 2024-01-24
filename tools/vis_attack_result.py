@@ -66,4 +66,4 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.3)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='FRMR', model_name='FR_VGG16', dataset_name='VOC', exp_name='famr_vgg16_early_stage_0123', start=0, end=1)
+    execute_attack(attacker_name='EDAG', model_name='DINO', dataset_name='COCO', exp_name='edag_coco_bbox_filter_exp', start=0, end=1)
