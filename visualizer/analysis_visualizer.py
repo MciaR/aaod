@@ -49,6 +49,40 @@ class AnalysisVisualizer(AAVisualizer):
     def get_timestamp():
         return time.strftime("%Y%m%dT%H%M%S", time.gmtime())
     
+    def bbox_cxcywh_to_xyxy(self, bbox: torch.Tensor) -> torch.Tensor:
+        """Convert bbox coordinates from (cx, cy, w, h) to (x1, y1, x2, y2).
+
+        Args:
+            bbox (Tensor): Shape (n, 4) for bboxes.
+
+        Returns:
+            Tensor: Converted bboxes.
+        """
+        cx, cy, w, h = bbox.split((1, 1, 1, 1), dim=-1)
+        bbox_new = [(cx - 0.5 * w), (cy - 0.5 * h), (cx + 0.5 * w), (cy + 0.5 * h)]
+        return torch.cat(bbox_new, dim=-1)
+
+    def rescale_bboxes(self, pred_bboxes, img_meta):
+        """Rescale bboxes to original pic scale.
+        Args:
+            pred_bboxes (torch.Tensor): pred_bboxes, shape is (N, 4).
+            img_meta (dict): metainfo of image.
+        Returns:
+            rescaled_bboxes (torch.Tensor): rescaled bboxes.
+        """
+        img_shape = img_meta['img_shape']
+
+        det_bboxes = self.bbox_cxcywh_to_xyxy(pred_bboxes)
+        det_bboxes[:, 0::2] = det_bboxes[:, 0::2] * img_shape[1]
+        det_bboxes[:, 1::2] = det_bboxes[:, 1::2] * img_shape[0]
+        det_bboxes[:, 0::2].clamp_(min=0, max=img_shape[1])
+        det_bboxes[:, 1::2].clamp_(min=0, max=img_shape[0])
+
+        det_bboxes /= det_bboxes.new_tensor(
+            img_meta['scale_factor']).repeat((1, 2))
+        
+        return det_bboxes
+    
     def save_activate_map_channel_wise(
             self,
             img=None,
