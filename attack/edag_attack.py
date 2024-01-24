@@ -200,6 +200,7 @@ class EDAGAttack(BaseAttack):
         active_scores = pred_scores[valid_indices]
         active_labels = paired_label_idx[valid_indices]
         
+        # NOTE: only for dino for now.
         # _exp_name = f'pred_bboxes/{self.get_attack_name()}/{self.exp_name}'
         # self.vis.visualize_bboxes(self.vis.rescale_bboxes(active_bboxes, data_sample.metainfo), data_sample.img_path, exp_name=_exp_name, labels=active_labels, scores=active_scores, distinguished_color=True)
 
@@ -215,6 +216,7 @@ class EDAGAttack(BaseAttack):
         valid_indices = valid_indices & expaned_filter_indices
         # final_bboxes, final_scores, final_labels = self.nms(active_bboxes, active_scores, active_labels)
 
+        # NOTE: only for dino for now.
         # _exp_name = f'effective_bboxes/{self.get_attack_name()}/{self.exp_name}'
         # self.vis.visualize_bboxes(self.vis.rescale_bboxes(active_bboxes, data_sample.metainfo), data_sample.img_path, exp_name=_exp_name, labels=active_labels, scores=active_scores, distinguished_color=True)
 
