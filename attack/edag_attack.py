@@ -21,10 +21,11 @@ class EDAGAttack(BaseAttack):
                  active_score_thr=0.,
                  targeted=True,
                  model_name='fr',
+                 category_wise=True,
                  attack_target: dict = None,
                  device='cuda:0') -> None:
         super().__init__(cfg_file, ckpt_file, device=device, exp_name=exp_name, cfg_options=cfg_options,
-                         attack_params=dict(gamma=gamma, M=M, model_name=model_name, active_score_thr=active_score_thr, targeted=targeted))
+                         attack_params=dict(gamma=gamma, M=M, model_name=model_name, active_score_thr=active_score_thr, targeted=targeted, category_wise=category_wise))
         assert model_name in ['fr', 'ssd', 'dino', 'centernet'], \
             f'EDAG now just support `fr`, `ssd`, `dino` and `centernet` as model_name.'
         self.attack_target = attack_target
@@ -230,12 +231,16 @@ class EDAGAttack(BaseAttack):
         """
         # add a random num which range from [1, num_classes] to clean_labels and mod 81, then we get the adv_labels.
         # that makes adv_labels[i] != clean_labels[i], and every element in adv_labels range from [0, num_classes]
-        target2adv_labels = (torch.arange(0, num_classes, device=self.device) + torch.randint(1, num_classes, (num_classes, ), device=self.device)) % num_classes
-        # update attack target
-        if self.attack_target is not None:
-            for key, value in self.attack_target.items():
-                target2adv_labels[key] = value
-        adv_labels = target2adv_labels[clean_labels]
+        # if use category_wise strategy
+        if self.category_wise:
+            target2adv_labels = (torch.arange(0, num_classes, device=self.device) + torch.randint(1, num_classes, (num_classes, ), device=self.device)) % num_classes
+            # update attack target
+            if self.attack_target is not None:
+                for key, value in self.attack_target.items():
+                    target2adv_labels[key] = value
+            adv_labels = target2adv_labels[clean_labels]
+        else:
+            adv_labels = (clean_labels + torch.randint(1, num_classes, (clean_labels.shape[0], ), device=self.device)) % num_classes
         return adv_labels
     
     def update_positive_indices(self, positive_indices, active_mask):
