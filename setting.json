@@ -356,6 +356,7 @@
                     "M": 100,
                     "model_name": "fr",
                     "active_score_thr": 0,
+                    "category_wise": true,
                     "cfg_options": {
                         "model": {
                             "test_cfg": {
@@ -547,7 +548,7 @@
             "THA": ["feature_type", "channel_mean", "stages", "alpha", "lr", "M", "adv_type", "constrain", "modify_percent", "scale_factor"],
             "EXPDAG": ["gamma", "M"],
             "DAG": ["gamma", "M"],
-            "EDAG": ["gamma", "M", "active_score_thr", "targeted"],
+            "EDAG": ["gamma", "M", "active_score_thr", "targeted", "category_wise"],
             "Fusion": ["M", "frmr_weight"],
             "RN": ["M"],
             "TSA": ["gamma", "M"]
