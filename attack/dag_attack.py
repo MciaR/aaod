@@ -7,6 +7,7 @@ from mmengine.structures import InstanceData
 class DAGAttack(BaseAttack):
     """Dense Adversary Generation. 
     Impelemented from paper: (Xie C, Wang J, Zhang Z, et al. Adversarial examples for semantic segmentation and object detection[C]//Proceedings of the IEEE international conference on computer vision. 2017: 1369-1378.)
+    Reference code from github: https://github.com/yizhe-ang/detectron2-1/blob/master/detectron2_1/adv.py
     Args:         
         gamma (float): scale factor of normalizing noise `r`.
         M (float): SGD total step, if iter reach the limit or every RP has been attack, the loop ends (for DAG).
@@ -63,6 +64,8 @@ class DAGAttack(BaseAttack):
         num_classes = pred_scores.shape[1]
 
         # use rescaled bbox to select positive proposals.
+        assert proposal_bboxes.shape[0] == pred_scores.shape[0], \
+            f'recaled proposal_bboxes length {proposal_bboxes.shape[0]} not equals to pred scores length {pred_scores.shape[0]}'
         _, positive_labels, remains = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
 
         # get un-rescaled bbox and corresponding scores
@@ -123,6 +126,7 @@ class DAGAttack(BaseAttack):
             positive_scores (torch.Tensor): remaining high quality targets scores.
             remains (torch.Tensor[bool]): filter flag for proposal_bboxes and its label.
         """
+        proposal_num = len(proposal_bboxes)
         # cal iou
         ious = self.pairwise_iou(proposal_bboxes, gt_bboxes)
 
@@ -138,7 +142,7 @@ class DAGAttack(BaseAttack):
         # cls_idx_repeat = gt_labels.repeat(proposal_num, 1)
         # label_idx = cls_idx_repeat[torch.arange(proposal_num), paired_gt_idx]
         label_idx = gt_labels[paired_gt_idx] # (proposal_num, 1) get the label indices of gt bboxes which paired to proposal_bboxes.
-        paired_scores = pred_scores[torch.arange(pred_scores.shape[0]), label_idx] # (proposal_num, 1) get the scores corresponding to paried bboxes.
+        paired_scores = pred_scores[torch.arange(proposal_num), label_idx] # (proposal_num, 1) get the scores corresponding to paried bboxes.
         score_remains = paired_scores > 0.1
 
         # Filter for positive proposals and their correspoinding gt labels
