@@ -1,5 +1,6 @@
 import torch
 
+from typing import Tuple
 from attack import BaseAttack
 from mmengine.structures import InstanceData
 
@@ -25,6 +26,38 @@ class DAGAttack(BaseAttack):
         super().__init__(cfg_file, ckpt_file, device=device, cfg_options=cfg_options, exp_name=exp_name,
                          attack_params=dict(gamma=gamma, M=M))
         
+    def bbox_cxcywh_to_xyxy(self, bbox: torch.Tensor) -> torch.Tensor:
+        """Convert bbox coordinates from (cx, cy, w, h) to (x1, y1, x2, y2).
+
+        Args:
+            bbox (Tensor): Shape (n, 4) for bboxes.
+
+        Returns:
+            Tensor: Converted bboxes.
+        """
+        cx, cy, w, h = bbox.split((1, 1, 1, 1), dim=-1)
+        bbox_new = [(cx - 0.5 * w), (cy - 0.5 * h), (cx + 0.5 * w), (cy + 0.5 * h)]
+        return torch.cat(bbox_new, dim=-1)
+
+    def scale_boxes(self, 
+                    boxes: torch.Tensor,
+                    scale_factor: Tuple[float, float]):
+        """Scale boxes with type of tensor or box type.
+
+        Args:
+            boxes (Tensor): boxes need to be scaled. Its type
+                can be a tensor.
+            scale_factor (Tuple[float, float]): factors for scaling boxes.
+                The length should be 2.
+
+        Returns:
+            torch.Tensor: Scaled boxes.
+        """
+        # Tensor boxes will be treated as horizontal boxes
+        repeat_num = int(boxes.size(-1) / 2)
+        scale_factor = boxes.new_tensor(scale_factor).repeat((1, repeat_num))
+        return boxes * scale_factor
+    
     def get_targets(
             self,
             clean_image,
@@ -44,9 +77,6 @@ class DAGAttack(BaseAttack):
             batch_inputs = data['inputs']
 
             x = self.model.extract_feat(batch_inputs)
-            # If there are no pre-defined proposals, use RPN to get proposals
-            rpn_results_list_rescale = self.model.rpn_head.predict(
-                x, batch_data_samples, rescale=True) # rescale to origin image size.
             
             rpn_results_list = self.model.rpn_head.predict(
                 x, batch_data_samples, rescale=False)
@@ -56,16 +86,17 @@ class DAGAttack(BaseAttack):
 
             batch_data_samples = self.model.add_pred_to_datasample(
                 batch_data_samples, results_list)
-            
-        proposal_bboxes = rpn_results_list_rescale[0].bboxes
+        
+        img_meta = batch_data_samples[0].metainfo
+        scale_factor = [1 / s for s in img_meta['scale_factor']]
+
+        proposal_bboxes = self.scale_boxes(boxes=batch_data_samples[0].pred_instances.bboxes, scale_factor=scale_factor)
         pred_scores = batch_data_samples[0].pred_instances.scores
         gt_bboxes = batch_data_samples[0].gt_instances.bboxes.to(self.device) # gt_bboxes is also original image size.
         gt_labels = batch_data_samples[0].gt_instances.labels.to(self.device)
         num_classes = pred_scores.shape[1]
 
         # use rescaled bbox to select positive proposals.
-        assert proposal_bboxes.shape[0] == pred_scores.shape[0], \
-            f'recaled proposal_bboxes length {proposal_bboxes.shape[0]} not equals to pred scores length {pred_scores.shape[0]}'
         _, positive_labels, remains = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
 
         # get un-rescaled bbox and corresponding scores

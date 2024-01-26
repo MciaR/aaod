@@ -66,4 +66,4 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.3)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='DAG', model_name='FR_VGG16', dataset_name='VOC', exp_name='dag_debug_test_0126', start=2480, end=2481)
+    execute_attack(attacker_name='DAG', model_name='FR_VGG16', dataset_name='VOC', exp_name='dag_debug_test_0126', start=7, end=8)
