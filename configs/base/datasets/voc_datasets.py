@@ -81,7 +81,7 @@ val_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         ann_file='VOC2007_test/ImageSets/Main/test.txt',
-        # data_prefix=dict(sub_data_root='EDAGinstance_wise/adv/FR_VGG16'),
+        # data_prefix=dict(sub_data_root='DAG/adv/FR_VGG16'),
         data_prefix=dict(sub_data_root='VOC2007_test/'),
         test_mode=True,
         pipeline=test_pipeline,
