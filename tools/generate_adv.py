@@ -101,9 +101,9 @@ if __name__ == "__main__":
     processes = []
     
     # params
-    model = 'FR_VGG16'
-    dataset_name = 'VOC'
-    attacker_name = 'DAG'
+    model = 'CenterNet'
+    dataset_name = 'COCO'
+    attacker_name = 'FRMR'
 
     for i in range(num_gpus):
         start = i / num_gpus

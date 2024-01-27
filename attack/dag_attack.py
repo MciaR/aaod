@@ -2,6 +2,7 @@ import torch
 
 from typing import Tuple
 from attack import BaseAttack
+from visualizer import AnalysisVisualizer
 from mmengine.structures import InstanceData
 
 
@@ -25,6 +26,7 @@ class DAGAttack(BaseAttack):
             f'`cfg_options` cannot be `None` for DAG Attack.'
         super().__init__(cfg_file, ckpt_file, device=device, cfg_options=cfg_options, exp_name=exp_name,
                          attack_params=dict(gamma=gamma, M=M))
+        self.vis = AnalysisVisualizer(cfg_file=self.cfg_file, ckpt_file=self.ckpt_file)
         
     def bbox_cxcywh_to_xyxy(self, bbox: torch.Tensor) -> torch.Tensor:
         """Convert bbox coordinates from (cx, cy, w, h) to (x1, y1, x2, y2).
@@ -90,19 +92,25 @@ class DAGAttack(BaseAttack):
         img_meta = batch_data_samples[0].metainfo
         scale_factor = [1 / s for s in img_meta['scale_factor']]
 
-        proposal_bboxes = self.scale_boxes(boxes=batch_data_samples[0].pred_instances.bboxes, scale_factor=scale_factor)
+        proposal_bboxes = self.scale_boxes(boxes=rpn_results_list[0].bboxes, scale_factor=scale_factor)
         pred_scores = batch_data_samples[0].pred_instances.scores
         gt_bboxes = batch_data_samples[0].gt_instances.bboxes.to(self.device) # gt_bboxes is also original image size.
         gt_labels = batch_data_samples[0].gt_instances.labels.to(self.device)
         num_classes = pred_scores.shape[1]
 
+        # _exp_name = f'pred_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # self.vis.visualize_bboxes(proposal_bboxes, batch_data_samples[0].img_path, exp_name=_exp_name)
+
         # use rescaled bbox to select positive proposals.
-        _, positive_labels, remains = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)
+        _, positive_labels, remains = self.select_positive_proposals(proposal_bboxes, pred_scores, gt_bboxes, gt_labels)        
 
         # get un-rescaled bbox and corresponding scores
         active_rpn_instance = InstanceData()
         active_rpn_instance.bboxes = rpn_results_list[0].bboxes[remains] # rescaled, not original image size.
         active_rpn_instance.labels = rpn_results_list[0].labels[remains]
+
+        # _exp_name = f'active_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # self.vis.visualize_bboxes(self.scale_boxes(active_rpn_instance.bboxes, scale_factor), batch_data_samples[0].img_path, exp_name=_exp_name)
 
         rpn_results_list[0] = active_rpn_instance
 
