@@ -93,12 +93,13 @@ class DAGAttack(BaseAttack):
         scale_factor = [1 / s for s in img_meta['scale_factor']]
 
         proposal_bboxes = self.scale_boxes(boxes=rpn_results_list[0].bboxes, scale_factor=scale_factor)
+        # proposal_bboxes = batch_data_samples[0].pred_instances.bboxes # TODO: interesing finding : same result with above sentence. for coco fr_r101 dag, all remains 746 proposals.
         pred_scores = batch_data_samples[0].pred_instances.scores
         gt_bboxes = batch_data_samples[0].gt_instances.bboxes.to(self.device) # gt_bboxes is also original image size.
         gt_labels = batch_data_samples[0].gt_instances.labels.to(self.device)
         num_classes = pred_scores.shape[1]
 
-        # _exp_name = f'pred_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # _exp_name = f'pred_all_bboxes/{self.get_attack_name()}/{self.exp_name}'
         # self.vis.visualize_bboxes(proposal_bboxes, batch_data_samples[0].img_path, exp_name=_exp_name)
 
         # use rescaled bbox to select positive proposals.
@@ -109,7 +110,7 @@ class DAGAttack(BaseAttack):
         active_rpn_instance.bboxes = rpn_results_list[0].bboxes[remains] # rescaled, not original image size.
         active_rpn_instance.labels = rpn_results_list[0].labels[remains]
 
-        # _exp_name = f'active_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # _exp_name = f'pred_active_bboxes/{self.get_attack_name()}/{self.exp_name}'
         # self.vis.visualize_bboxes(self.scale_boxes(active_rpn_instance.bboxes, scale_factor), batch_data_samples[0].img_path, exp_name=_exp_name)
 
         rpn_results_list[0] = active_rpn_instance
