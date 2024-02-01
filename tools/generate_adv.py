@@ -97,13 +97,18 @@ def generate_and_save(start, end, model, dataset_name, attacker_name, device):
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')
     num_gpus = torch.cuda.device_count()
-    print(f'Total GPU nums: {num_gpus}, image will be divided to {num_gpus} parts to run.')
     processes = []
     
     # params
-    model = 'CenterNet'
+    model = 'DINO'
     dataset_name = 'COCO'
-    attacker_name = 'FRMR'
+    attacker_name = 'EDAG'
+
+    print(f'`{attacker_name}` Attack Model `{model}` on `{dataset_name}` Dataset Starting...')
+    print(f'Total GPU nums: {num_gpus}, image will be divided to {num_gpus} parts to run.')
+
+    # TODO: EDAG, DINO, COCO breakpoint on cuda:0- 2255, cuda:1-4789
+    # Time consume: cuda0: 17:51:39 17:51:38. ETA  ~2h. 
 
     for i in range(num_gpus):
         start = i / num_gpus
