@@ -102,7 +102,7 @@ if __name__ == "__main__":
     # params
     model = 'CenterNet'
     dataset_name = 'COCO'
-    attacker_name = 'TSA'
+    attacker_name = 'FRMR'
 
     print(f'`{attacker_name}` Attack Model `{model}` on `{dataset_name}` Dataset Starting...')
     print(f'Total GPU nums: {num_gpus}, image will be divided to {num_gpus} parts to run.')
