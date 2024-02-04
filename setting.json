@@ -131,9 +131,9 @@
                     "use_channel_scale": false,
                     "feature_type": "neck",
                     "channel_mean": false,
-                    "stages": [0],
-                    "alpha": 0.01,
-                    "lr": 0.05,
+                    "stages": [0], 
+                    "alpha": 0,
+                    "lr": 0.5,
                     "M": 500,
                     "adv_type": "residual",
                     "constrain": "distance"  

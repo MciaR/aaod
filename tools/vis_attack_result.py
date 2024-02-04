@@ -66,4 +66,4 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.3)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='DAG', model_name='FR_R101', dataset_name='COCO', exp_name='dag_debug_test_0126', start=0, end=1)
+    execute_attack(attacker_name='FRMR', model_name='CenterNet', dataset_name='COCO', exp_name='frmr_centernet_test_0204', start=0, end=1)
