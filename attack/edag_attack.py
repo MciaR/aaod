@@ -218,7 +218,7 @@ class EDAGAttack(BaseAttack):
         # final_bboxes, final_scores, final_labels = self.nms(active_bboxes, active_scores, active_labels)
 
         # NOTE: only for dino for now.
-        # _exp_name = f'effective_bboxes/{self.get_attack_name()}/{self.exp_name}'
+        # _exp_name = f'active_bboxes/{self.get_attack_name()}/{self.exp_name}'
         # self.vis.visualize_bboxes(self.vis.rescale_bboxes(active_bboxes, data_sample.metainfo), data_sample.img_path, exp_name=_exp_name, labels=active_labels, scores=active_scores, distinguished_color=True)
 
         return active_bboxes, active_scores, active_labels, valid_indices, C
