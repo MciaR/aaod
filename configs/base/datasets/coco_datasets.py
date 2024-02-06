@@ -60,7 +60,7 @@ val_dataloader = dict(
         ann_file='annotations/instances_val2017.json',
         data_prefix=dict(img='images/val2017/'),
         # ann_file='annotations/png_instances_val2017.json',
-        # data_prefix=dict(img='FRMR/adv/CenterNet'),
+        # data_prefix=dict(img='TSA/adv/CenterNet'),
         test_mode=True,
         pipeline=test_pipeline,
         backend_args=backend_args))

@@ -102,15 +102,16 @@ if __name__ == "__main__":
     # params
     model = 'CenterNet'
     dataset_name = 'COCO'
-    attacker_name = 'FRMR'
+    attacker_name = 'TSA'
 
     print(f'`{attacker_name}` Attack Model `{model}` on `{dataset_name}` Dataset Starting...')
     print(f'Total GPU nums: {num_gpus}, image will be divided to {num_gpus} parts to run.')
 
-    # TODO: EDAG, DINO, COCO breakpoint on cuda:0- 2255, cuda:1-4789
-    # Time consume: cuda0: 17:51:39 17:51:38. ETA  ~2h. 
-    # p1 = Process(target=generate_and_save, args=(2254 / 5000, 2500 / 5000, model, dataset_name, attacker_name, 'cuda:0'))
-    # p2 = Process(target=generate_and_save, args=(4788 / 5000, 5000 / 5000, model, dataset_name, attacker_name, 'cuda:1'))
+    # TODO: FRMR, CenterNet, COCO breakpoint on cuda:0- 1890, cuda:1-4421
+    # Time consume: cuda0: 24:50:33 24:50:42. ETA  ~8h
+    
+    # p1 = Process(target=generate_and_save, args=(1889 / 5000, 2500 / 5000, model, dataset_name, attacker_name, 'cuda:0'))
+    # p2 = Process(target=generate_and_save, args=(4420 / 5000, 5000 / 5000, model, dataset_name, attacker_name, 'cuda:1'))
     # p1.start()
     # p2.start()
     # processes = [p1, p2]
