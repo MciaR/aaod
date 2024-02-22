@@ -50,8 +50,15 @@ def cal_metrics(attack_name, model_name, dataset_name):
         adv_image = imread(adv_img_path)
         clean_image = imread(clean_img_path)
 
-        adv_grey = rgb2gray(adv_image)
-        clean_grey = rgb2gray(clean_image)
+        if adv_image.ndim == 3:
+            adv_grey = rgb2gray(adv_image)
+        else:
+            adv_grey = adv_image
+        
+        if clean_image.ndim == 3:
+            clean_grey = rgb2gray(clean_image)
+        else:
+            clean_grey = clean_image
 
         try:
             psnr_value = psnr(adv_image, clean_image)
@@ -68,7 +75,21 @@ def cal_metrics(attack_name, model_name, dataset_name):
 
 if __name__  == "__main__":
     attack_name = 'FRMR'
-    model_name = 'SSD300'
-    dataset_name = 'VOC'
+    # model_name = 'SSD300'
+    # dataset_name = 'VOC'
 
-    print(f'{attack_name} attacking {model_name} on {dataset_name}, psnr ans ssim: {cal_metrics(attack_name, model_name, dataset_name)}')
+    # print(f'{attack_name} attacking {model_name} on {dataset_name}, psnr ans ssim: {cal_metrics(attack_name, model_name, dataset_name)}')
+
+    output = ["dataset model psnr ssim"]
+
+    dataset2model = {'COCO': ['FR_R101', 'DINO', 'CenterNet'], 'VOC': ['FR_R101', 'FR_VGG16', 'SSD300']}
+    for dataset, model_list in dataset2model.items():
+        for model in model_list:
+            print(f'Calculating {model} on {dataset} ...')
+            psnr_result, ssim_result = cal_metrics(attack_name, model, dataset)
+            output.append(f"{dataset} {model} {psnr_result} {ssim_result}")
+
+    with open('records/analysis/noise_magnitude.txt', 'a') as f:
+        f.writelines(output)
+
+    print('PSNR and SSIM has been saved in records/analysis/noise_magnitude.txt')
