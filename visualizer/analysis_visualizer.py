@@ -42,7 +42,8 @@ class AnalysisVisualizer(AAVisualizer):
             '#604E97', '#F6A600', '#B3446C', '#DCD300', '#882D17', '#8DB600', '#654522'
         ]
 
-        plt.rcParams['font.sans-serif'] = ['Times New Roman']
+        plt.rcParams['font.serif'] = ['Times New Roman']
+        plt.rcParams['font.family'] = 'serif'
         plt.rcParams['font.size'] = self.fig_fontsize
 
     @staticmethod
