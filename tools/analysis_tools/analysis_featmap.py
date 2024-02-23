@@ -15,8 +15,8 @@ if __name__ == "__main__":
     dataset = vis.dataset
     data_idx = 0
 
-    # vis.show_stage_results(data_sample=dataset[data_idx]['data_samples'], save=True, show_mlvl_pred=False, exp_name=dataset_name + '_' +  model_name, dataset_idx=data_idx)
-    vis.show_single_pic_feats(data_sample=dataset[data_idx]['data_samples'], feature_type='neck', arrangement=(3, 4), show_stage=3, pic_overlay=True, save=True, dataset_idx=data_idx, exp_name=dataset_name, feat_normalize=True)
+    vis.show_stage_results(img='data/coco2017/images/val2017/000000090284.jpg', data_sample=None, save=True, show_mlvl_pred=False, exp_name=dataset_name + '_' +  model_name, dataset_idx=data_idx)
+    # vis.show_single_pic_feats(data_sample=dataset[data_idx]['data_samples'], feature_type='neck', arrangement=(3, 4), show_stage=3, pic_overlay=True, save=True, dataset_idx=data_idx, exp_name=dataset_name, feat_normalize=True)
 
 
     

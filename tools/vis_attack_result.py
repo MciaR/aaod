@@ -61,9 +61,10 @@ def execute_attack(attacker_name, model_name, dataset_name, exp_name, start, end
     vis = ExpVisualizer(cfg_file=attacker_params['cfg_file'], ckpt_file=attacker_params['ckpt_file'], use_attack=True, attacker=attacker)
     dataset = vis.dataset
 
+    # show_lvl_preds = False # only for eccv papers
     for i in range(start, end):
         vis.show_attack_results(model_name=model_name + '_' + dataset_name, data_sample=dataset[i]['data_samples'], dataset_idx=i, save=True, feature_grey=False, remain_list=remain_list, 
                                 show_features=show_features, show_lvl_preds=show_lvl_preds, save_analysis=save_analysis, show_thr=0.3)
 
 if __name__ == '__main__':
-    execute_attack(attacker_name='EDAG', model_name='SSD300', dataset_name='COCO', exp_name='edag_dino_params_test_0206', start=0, end=1)
+    execute_attack(attacker_name='FRMR', model_name='FR_VGG16', dataset_name='VOC', exp_name='eccv_20240223', start=3, end=4)

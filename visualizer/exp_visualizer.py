@@ -383,7 +383,7 @@ class ExpVisualizer():
         if show_lvl_preds:
             row += 2
         plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=1200)
-        plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+        plt.subplots_adjust(wspace=0.05, hspace=0.25)
 
         # ====== ori_image & noise & adv_image & pred results =======
         image = Image.open(img_path)
@@ -547,8 +547,6 @@ class ExpVisualizer():
                 plt.xlabel(f"adv Fpn {i} pred")
                 plt.imshow(adv_heatmap_pred)
                 ind += 1
-
-        plt.tight_layout()
 
         attack_params = self.attacker.attack_params
         params_str = self.cvt_params2savename(attack_params, remain_list)
