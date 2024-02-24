@@ -85,16 +85,18 @@ class AnalysisVisualizer(AAVisualizer):
         
         return det_bboxes
     
-    def analysis_images_channel_activations(
+    def analysis_adv_and_clean_mean_activation(
             self,
             feature_type,
             exp_name,
-            img_set_path,
+            adv_images_path,
+            clean_image_path,
             attack_name=None,
             figure_name=None,):
         """Save channel wise mean activate value.
         Args:
-            img_set_path (str): image set path.
+            adv_images_path (str): adv image set path.
+            clean_image_path (str): clean image set path.
             attack_name (str): attack method, default `None`.
             exp_name (str): exp name
             feature_type (str): 'backbone' or 'neck'.
@@ -103,14 +105,16 @@ class AnalysisVisualizer(AAVisualizer):
         # plt.figure(frameon=False, figsize=(4*col, 4*row), dpi=1200)
         # plt.subplots_adjust(wspace=0.3)
 
-        assert img_set_path, \
-            f'img_set_path can not be empty.'
+        assert adv_images_path, \
+            f'adv_images_path can not be empty.'
         
-        image_list = os.listdir(img_set_path)
-        
-        mean_activation_list = []
-        for image_name in tqdm(image_list):
-            img_path = os.path.join(img_set_path, image_name)
+        # -------------- adv images -----------------
+        print('Processing adversarial examples ...')
+        adv_mean_activation_list = []
+        adv_image_list = os.listdir(adv_images_path)
+
+        for image_name in tqdm(adv_image_list):
+            img_path = os.path.join(adv_images_path, image_name)
 
             outputs = self._forward(feature_type=feature_type, img=img_path) # (stages, 1, C, H, W)
             stage_channel_mean = []
@@ -125,27 +129,55 @@ class AnalysisVisualizer(AAVisualizer):
                 channel_wise_mean = channel_wise_mean.cpu().detach().numpy()
                 stage_channel_mean.append(channel_wise_mean)
             
-            mean_activation_list.append(stage_channel_mean)
+            adv_mean_activation_list.append(stage_channel_mean)
 
         # get average mean activation across images.
-        stage_y = np.array(mean_activation_list).mean(axis=0)
+        adv_stage_y = np.array(adv_mean_activation_list).mean(axis=0)
 
-        row, col = (1, len(stage_y))
-        plt.figure(frameon=False, figsize=(4*col, 4*row), dpi=1200)
+        # -------------- clean images -----------------
+        print('Processing adversarial examples ...')
+        clean_mean_activation_list = []
+        clean_image_list = os.listdir(clean_image_path)
+        
+        for image_name in tqdm(clean_image_list):
+            img_path = os.path.join(clean_image_path, image_name)
+
+            outputs = self._forward(feature_type=feature_type, img=img_path) # (stages, 1, C, H, W)
+            stage_channel_mean = []
+            for i in range(len(outputs)):
+                feature_map = outputs[i]
+                N, C, H, W = feature_map.shape
+                assert N == 1, \
+                    f'Batch_size must be 1.'
+                
+                sample_features = feature_map[0]
+                channel_wise_mean = torch.mean(sample_features.view(C, -1), dim=-1) # (C, )
+                channel_wise_mean = channel_wise_mean.cpu().detach().numpy()
+                stage_channel_mean.append(channel_wise_mean)
+            
+            clean_mean_activation_list.append(stage_channel_mean)
+
+        # get average mean activation across images.
+        clean_stage_y = np.array(clean_mean_activation_list).mean(axis=0)
+
+        row, col = (1, len(clean_stage_y))
+        plt.figure(frameon=False, figsize=(10*col, 4*row), dpi=300)
         plt.subplots_adjust(wspace=0.3)
 
-        for i in range(len(stage_y)):
-            y = stage_y[i] # (256, )
-            x = np.linspace(0, len(y), len(y), endpoint=False)
+        for i in range(len(clean_stage_y)):
+            y1 = clean_stage_y[i] # (256, )
+            y2 = adv_stage_y[i]
+            x = np.linspace(0, len(y1), len(y1), endpoint=False)
 
             if i == 0 and figure_name:
                 plt.ylabel(figure_name)
             plt.subplot(row, col, i + 1) # subplot index start from 1
             plt.ylim(-2, 2)
             plt.title(f'{feature_type} stages {i}')
-            plt.scatter(x, y, s=10)
-
-        save_path = os.path.join(self.save_dir, 'mean_activation_across_images_set')
+            plt.bar(x, y1, label='clean', color='#1565C0')
+            plt.bar(x, y2, label='adv.', color='#7B1FA2', alpha=0.5)
+            
+        save_path = os.path.join(self.save_dir, 'adv_and_clean_mean_activation')
         if attack_name:
             save_path = os.path.join(save_path, attack_name)
 
