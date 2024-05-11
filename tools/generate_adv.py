@@ -100,9 +100,9 @@ if __name__ == "__main__":
     processes = []
     
     # params
-    model = 'CenterNet'
-    dataset_name = 'COCO'
-    attacker_name = 'TSA'
+    model = 'FR_R101'
+    dataset_name = 'VOC'
+    attacker_name = 'DAG'
 
     print(f'`{attacker_name}` Attack Model `{model}` on `{dataset_name}` Dataset Starting...')
     print(f'Total GPU nums: {num_gpus}, image will be divided to {num_gpus} parts to run.')
