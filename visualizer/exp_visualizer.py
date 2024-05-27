@@ -112,7 +112,7 @@ class ExpVisualizer():
         _, indices = torch.topk(sum_channel_featmap, topk)
         topk_featmap = _feature[indices]
         
-        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=1200)
+        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         if feat_normalize:
@@ -199,7 +199,7 @@ class ExpVisualizer():
         if show_mlvl_pred:
             row += 1
 
-        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=1200)
+        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=300)
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
         ind = 1
@@ -382,7 +382,7 @@ class ExpVisualizer():
             row += 3
         if show_lvl_preds:
             row += 2
-        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=1200)
+        plt.figure(frameon=False, figsize=(3*col, 2.2*row), dpi=300)
         plt.subplots_adjust(wspace=0.05, hspace=0.25)
 
         # ====== ori_image & noise & adv_image & pred results =======
